@@ -13,10 +13,16 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # install.packages("httr")
-install.packages("rvest")
-install.packages("jsonlite")
-install.packages("xml2")
+# install.packages("rvest")
+# install.packages("jsonlite")
+# install.packages("xml2")
+# install.packages("birdnik")
 
+library("httr")
+library("rvest")
+library("jsonlite")
+library("xml2")
+library("birdnik")
 
 
 ```
@@ -151,6 +157,9 @@ Using the pre-existing API key and word_frequency(), get the frequency of the wo
 
 # Load birdnik
 library("birdnik")
+
+api_key <- "d8ed66f01da01b0c6a0070d7c1503801993a39c126fbc3382"
+
 
 # Get the word frequency for "vector", using api_key to access it
 vector_frequency <- word_frequency(api_key, "vector")
