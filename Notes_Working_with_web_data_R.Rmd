@@ -11,16 +11,176 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-```{r cars}
-summary(cars)
-``` 
+```{r}
+# install.packages("httr")
+install.packages("rvest")
+install.packages("jsonlite")
+install.packages("xml2")
 
-## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+# Course Description
+
+Most of the useful data in the world, from economic data to news content to geographic information, lives somewhere on the internet - and this course will teach you how to access it. You'll explore how to work with APIs (computer-readable interfaces to websites), access data from Wikipedia and other sources, and build your own simple API client. For those occasions where APIs are not available, you'll find out how to use R to scrape information out of web pages. In the process you'll learn how to get data out of even the most stubborn website, and how to turn it into a format ready for further analysis. The packages you'll use and learn your way around are rvest, httr, xml2 and jsonlite, along with particular API client packages like WikipediR and pageviews.
+
+## Downloading Files and Using API Clients
+
+Sometimes getting data off the internet is very, very simple - it's stored in a format that R can handle and just lives on a server somewhere, or it's in a more complex format and perhaps part of an API but there's an R package designed to make using it a piece of cake. This chapter will explore how to download and read in static files, and how to use APIs when pre-existing clients are available.
+
+
+
+### Downloading files and reading them into R
+
+In this first exercise we're going to look at reading already-formatted datasets - CSV or TSV files, with which you'll no doubt be familiar! - into R from the internet. This is a lot easier than it might sound because R's file-reading functions accept not just file paths, but also URLs.
+
+Instructions
+The URLs to those files are in your R session as csv_url and tsv_url.
+
+Read the CSV file stored at csv_url into R using read.csv(). Assign the result to csv_data.
+Do the same for the TSV file stored at tsv_url using read.delim(). Assign the result to tsv_data.
+Examine each object using head().
+
+```{r}
+
+# Here are the URLs! As you can see they're just normal strings
+csv_url <- "http://s3.amazonaws.com/assets.datacamp.com/production/course_1561/datasets/chickwts.csv"
+tsv_url <- "http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/tsv_data.tsv"
+
+# Read a file in from the CSV URL and assign it to csv_data
+csv_data <- read.csv(csv_url)
+
+# Read a file in from the TSV URL and assign it to tsv_data
+tsv_data <- read.delim(tsv_url)
+
+# Examine the objects with head()
+head(csv_data)
+head(tsv_data)
+
+```
+
+## Saving raw files to disk
+
+Sometimes just reading the file in from the web is enough, but often you'll want to store it locally so that you can refer back to it. This also lets you avoid having to spend the start of every analysis session twiddling your thumbs while particularly large files download.
+
+Helpfully, R has download.file(), a function that lets you do just that: download a file to a location of your choice on your computer. It takes two arguments; url, indicating the URL to read from, and destfile, the destination to write the downloaded file to. In this case, we've pre-defined the URL - once again, it's csv_url.
+
+Instructions
+Download the file at csv_url with download.file(), naming the destination file "feed_data.csv".
+Read "feed_data.csv" into R with read.csv().
+
+```{r}
+# Download the file with download.file()
+download.file(url = csv_url, destfile = "feed_data.csv")
+
+# Read it in with read.csv()
+csv_data <- read.csv("feed_data.csv")
+```
+
+
+### Saving formatted files to disk
+
+Whether you're downloading the raw files with download.file() or using read.csv() and its sibling functions, at some point you're probably going to find the need to modify your input data, and then save the modified data to disk so you don't lose the changes.
+
+You could use write.table(), but then you have to worry about accidentally writing out data in a format R can't read back in. An easy way to avoid this risk is to use saveRDS() and readRDS(), which save R objects in an R-specific file format, with the data structure intact. That means you can use it for any type of R object (even ones that don't turn into tables easily), and not worry you'll lose data reading it back in. saveRDS() takes two arguments, object, pointing to the R object to save and file pointing to where to save it to. readRDS() expects file, referring to the path to the RDS file to read in.
+
+In this example we're going to modify the data you already read in, which is predefined as csv_data, and write the modified version out to a file before reading it in again.
+
+Instructions
+Modify csv_data to add the column square_weight, containing the square of the weight column.
+Save it to disk as "modified_feed_data.RDS" with saveRDS().
+Read it back in as modified_feed_data with readRDS().
+Examine modified_feed_data.
+
+```{r}
+# Add a new column: square_weight
+csv_data$square_weight <- csv_data$weight * csv_data$weight
+
+# Save it to disk with saveRDS()
+saveRDS(csv_data, file = "modified_feed_data.RDS")
+
+# Read it back in with readRDS()
+modified_feed_data <- readRDS("modified_feed_data.RDS")
+
+# Examine modified_feed_data
+str(modified_feed_data)
+```
+
+
+
+### Using API clients
+
+So we know that APIs are server components to make it easy for your code to interact with a service and get data from it. We also know that R features many "clients" - packages that wrap around connections to APIs so you don't have to worry about the details.
+
+Let's look at a really simple API client - the pageviews package, which acts as a client to Wikipedia's API of pageview data. As with other R API clients, it's formatted as a package, and lives on CRAN - the central repository of R packages. The goal here is just to show how simple clients are to use: they look just like other R code, because they are just like other R code.
+
+Instructions
+Load the package pageviews.
+Use the article_pageviews() function to get the pageviews for the article "Hadley Wickham".
+Examine the resulting object.
+
+
+```{r}
+# Load pageviews
+library("pageviews")
+
+# Get the pageviews for "Hadley Wickham"
+hadley_pageviews <- article_pageviews(project = "en.wikipedia", "Hadley Wickham")
+
+# Examine the resulting object
+str(hadley_pageviews)
+```
+
+
+Using access tokens
+100xp
+As we discussed in the last video, it's common for APIs to require access tokens - unique keys that verify you're authorised to use a service. They're usually pretty easy to use with an API client.
+
+To show how they work, and how easy it can be, we're going to use the R client for the Wordnik dictionary and word use service - 'birdnik' - and an API token we prepared earlier. Birdnik is fairly simple (I wrote it!) and lets you get all sorts of interesting information about word usage in published works. For example, to get the frequency of the use of the word "chocolate", you would write:
+
+word_frequency(api_key, "chocolate")
+In this exercise we're going to look at the word "vector" (since it's a common word in R!) using a pre-existing API key (stored as api_key)
+
+Instructions
+Load the package birdnik.
+Using the pre-existing API key and word_frequency(), get the frequency of the word "vector" in Wordnik's database. Assign the results to vector_frequency
+
+```{r}
+
+# Load birdnik
+library("birdnik")
+
+# Get the word frequency for "vector", using api_key to access it
+vector_frequency <- word_frequency(api_key, "vector")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Using httr to interact with APIs directly
+
+If an API client doesn't exist, it's up to you to communicate directly with the API. But don't worry, the package `httr` makes this really straightforward. In this chapter you'll learn how to make web requests from R, how to examine the responses you get back and some best practices for doing this in a responsible way.
+
+## Handling JSON and XML
+
+Sometimes data is a TSV or nice plaintext output. Sometimes it's XML and/or JSON. This chapter walks you through what JSON and XML are, how to convert them into R-like objects, and how to extract data from them. You'll practice by examining the revision history for a Wikipedia article retrieved from the Wikipedia API using httr, xml2 and jsonlite.
+
+Web scraping with XPATHs
+
+Now that we've covered the low-hanging fruit ("it has an API, and a client", "it has an API") it's time to talk about what to do when a website doesn't have any access mechanisms at all - when you have to rely on web scraping. This chapter will introduce you to the rvest web-scraping package, and build on your previous knowledge of XML manipulation and XPATHs.
+
+CSS Web Scraping and Final Case Study
+
+CSS path-based web scraping is a far-more-pleasant alternative to using XPATHs. You'll start this chapter by learning about CSS, and how to leverage it for web scraping. Then, you'll work through a final case study that combines everything you've learnt so far to write a function that queries an API, parses the response and returns 
