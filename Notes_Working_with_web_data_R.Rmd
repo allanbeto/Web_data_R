@@ -17,12 +17,18 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("jsonlite")
 # install.packages("xml2")
 # install.packages("birdnik")
+#install.packages("rlist")
+install.packages("dplyr")
 
 library("httr")
 library("rvest")
 library("jsonlite")
 library("xml2")
 library("birdnik")
+library("rlist")
+
+# download.file("http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_json.rds",  "had_rev_json.rds")
+# download.file("http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_xml.rds", "had_rev_xml.rds")
 
 
 ```
@@ -79,7 +85,7 @@ Read "feed_data.csv" into R with read.csv().
 
 ```{r}
 # Download the file with download.file()
-download.file(url = csv_url, destfile = "feed_data.csv")
+# download.file(url = csv_url, destfile = "feed_data.csv")
 
 # Read it in with read.csv()
 csv_data <- read.csv("feed_data.csv")
@@ -168,23 +174,385 @@ vector_frequency <- word_frequency(api_key, "vector")
 
 
 
-
-
-
-
-
-
-
-
-
-
 ## Using httr to interact with APIs directly
 
 If an API client doesn't exist, it's up to you to communicate directly with the API. But don't worry, the package `httr` makes this really straightforward. In this chapter you'll learn how to make web requests from R, how to examine the responses you get back and some best practices for doing this in a responsible way.
 
+
+### GET requests in practice
+
+To start with you're going to make a GET request. As discussed in the video, this is a request that asks the server to give you a particular piece of data or content (usually specified in the URL). These make up the majority of the requests you'll make in a data science context, since most of the time you'll be getting data from servers, not giving it to them.
+
+To do this you'll use the httr package, written by Hadley Wickham (of course), which makes HTTP requests extremely easy. You're going to make a very simple GET request, and then inspect the output to see what it looks like.
+
+Instructions
+Load the httr package.
+Use the GET() function to make a request to http://httpbin.org/get, saving the result to get_result.
+Print get_result to inspect it.
+
+
+```{r}
+  # Load the httr package
+library("httr")
+
+# Make a GET request to http://httpbin.org/get
+get_result <- GET("http://httpbin.org/get")
+
+# Print it to inspect it
+get_result
+  
+```
+
+
+### POST requests in practice
+
+Next we'll look at POST requests, also made through httr, with the function (you've guessed it) POST(). Rather than asking the server to give you something, as in GET requests, a POST request asks the server to accept something from you. They're commonly used for things like file upload, or authentication. As a result of their use for uploading things, POST() accepts not just a url but also a body argument containing whatever you want to give to the server.
+
+You'll make a very simple POST request, just uploading a piece of text, and then inspect the output to see what it looks like.
+
+Instructions
+Load the httr package.
+Make a POST request with the URL http://httpbin.org/post and the body "this is a test", saving the result to post_result.
+Print post_result to inspect it.
+
+```{r}
+  # Load the httr package
+library("httr")
+
+# Make a POST request to http://httpbin.org/post with the body "this is a test"
+post_result <- POST("http://httpbin.org/post", body = "this is a test")
+
+# Print it to inspect it
+post_result      
+
+```
+
+Nicely done. The output for POST requests looks pretty similar to that for GET requests, although (in this case) the body of your message is included - this is a test. Again, we'll dig into certain elements of the output in just a bit.
+
+
+### Extracting the response
+
+Making requests is all well and good, but it's also not why you're here. What we really want to do is get the data the server sent back, which can be done with httr's content() function. You pass it an object returned from a GET (or POST, or DELETE, or...) call, and it spits out whatever the server actually sent in an R-compatible structure.
+
+We're going to demonstrate that now, using a slightly more complicated URL than before - in fact, using a URL from the Wikimedia pageviews system you dealt with through the pageviews package, which is stored as url. Without looking too much at the structure for the time being (we'll get to that later) this request asks for the number of pageviews to the English-language Wikipedia's "Hadley Wickham" article on 1 and 2 January 2017.
+
+Instructions
+httr is loaded in your workspace.
+
+Make a GET request using the url object as the URL. Save the results as pageview_response.
+Call content() on pageview_response to retrieve the data the server has sent back. Save the data as pageview_data.
+Examine pageview_data with str()
+
+```{r}
+
+url <- "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia.org/all-access/all-agents/Hadley_Wickham/daily/20170101/20170102"
+# Make a GET request to url and save the results
+pageview_response <- GET(url)
+
+# Call content() to retrieve the data the server sent back
+pageview_data <- content(pageview_response)
+
+# Examine the results with str()
+str(pageview_data)
+```
+
+
+### Handling http failures
+
+As mentioned, HTTP calls can go wrong. Handling that can be done with httr's http_error() function, which identifies whether a server response contains an error.
+
+If the response does contain an error, calling http_error() over the response will produce TRUE; otherwise, FALSE. You can use this for really fine-grained control over results. For example, you could check whether the request contained an error, and (if so) issue a warning and re-try the request.
+
+For now we'll try something a bit simpler - issuing a warning that something went wrong if http_error() returns TRUE, and printing the content if it doesn't.
+
+Instructions
+Make a httr GET() request to the URL stored as fake_url, and store the result as request_result.
+If http_error() returns TRUE, use warning() to issue the warning "The request failed".
+If not, use content() (as demonstrated in previous exercises) to print the contents of the result.
+
+
+```{r}
+  
+fake_url <- "http://google.com/fakepagethatdoesnotexist"
+
+# Make the GET request
+request_result <- GET(fake_url)
+
+# Check request_result
+if(http_error(request_result)){
+	TRUE
+	warning("The request failed")
+} else {
+	content(request_result)
+}
+```
+
+
+Constructing queries (Part I)
+100xp
+As briefly discussed in the previous video, the actual API query (which tells the API what you want to do) tends to be in one of the two forms. The first is directory-based, where values are separated by / marks within the URL. The second is parameter-based, where all the values exist at the end of the URL and take the form of key=value.
+
+Constructing directory-based URLs can be done via paste(), which takes an unlimited number of strings, along with a separator, as sep. So to construct http://swapi.co/api/vehicles/12 we'd call:
+
+paste("http://swapi.co", "api", "vehicles", "12", sep = "/")
+Let's do that now! We'll cover parameter-based URLs later. In the mean time we can play with SWAPI, mentioned above, which is an API chock full of star wars data. This time, rather than a vehicle, we'll look for a person.
+
+Instructions
+httr is loaded in your workspace.
+
+Construct a directory-based API URL to http://swapi.co/api, looking for person 1 in people.
+Assign the URL to directory_url.
+Use GET to make an API call with directory_url.
+
+```{r}
+# Construct a directory-based API URL to `http://swapi.co/api`,
+# looking for person `1` in `people`
+directory_url <- paste("http://swapi.co/api", "people", 1, sep = "/")
+
+# Make a GET call with it
+result <- GET(directory_url)
+```
+
+### Constructing queries (Part II)
+
+As mentioned (albeit briefly) in the last exercise, there are also parameter based URLs, where all the query values exist at the end of the URL and take the form of key=value - they look something like http://fakeurl.com/foo.php?country=spain&food=goulash
+
+Constructing parameter-based URLs can also be done with paste(), but the easiest way to do it is with GET() and POST() themselves, which accept a query argument consisting of a list of keys and values. So, to continue with the food-based examples, we could construct fakeurl.com/api.php?fruit=peaches&day=thursday with:
+
+GET("fakeurl.com/api.php", query = list(fruit = "peaches", day = "thursday"))
+In this exercise you'll construct a call to https://httpbin.org/get?nationality=americans&country=antigua.
+
+Instructions
+Start by contructing the query_params list, with a nationality parameter of "americans" and a country parameter of "antigua".
+Construct a parameter-based call to https://httpbin.org/get, using GET() passing query_params to the query arugment.
+Print the response parameter_response.
+
+```{r}
+  # Create list with nationality and country elements
+query_params <- list(nationality = "americans", 
+    country = "antigua")
+    
+# Make parameter-based call to httpbin, with query_params
+parameter_response <- GET("https://httpbin.org/get", query = query_params)
+
+# Print parameter_response
+parameter_response
+```
+
+### Using user agents
+
+As discussed in the video, informative user-agents are a good way of being respectful of the developers running the API you're interacting with. They make it easy for them to contact you in the event something goes wrong. I always try to include:
+
+My email address;
+A URL for the project the code is a part of, if it's got a URL.
+Building user agents is done by passing a call to user_agent() into the GET() or POST() request; something like:
+
+GET("http://url.goes.here/", user_agent("somefakeemail@domain.com http://project.website"))
+In the event you don't have a website, a short one-sentence description of what the project is about serves pretty well.
+
+Instructions
+Make a GET() request to url.
+Include a user agent that has a fake email address "my@email.address" followed by the sentence "this is a test".
+Assign the response to server_response.
+
+
+```{r}
+  # Do not change the url
+url <- "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/Aaron_Halfaker/daily/2015100100/2015103100"
+
+# Add the email address and the test sentence inside user_agent()
+server_response <- GET(url, user_agent("my@email.address this is a test"))
+```
+
+
+### Rate-limiting
+
+The next stage of respectful API usage is rate-limiting: making sure you only make a certain number of requests to the server in a given time period. What limit is expected will vary from server to server, but the implementation is always pretty much the same and involves a call to Sys.sleep(). This function takes one argument, a number, which represents the number of seconds to "sleep" (pause) the R session for. So if you call Sys.sleep(15), it'll pause for 15 seconds before allowing further code to run.
+
+As you can imagine, this is really useful for rate-limiting. Only allowed 4 requests a minute? No problem! Just pause for 15 seconds between each request and you're guaranteed to never exceed it. Let's demonstrate now by putting together a little loop that sends multiple requests, on a 10-second time delay.
+
+Instructions
+Construct a vector of 2 URLs, http://fakeurl.com/api/1.0/ and http://fakeurl.com/api/2.0/.
+Write a for-loop that sends a GET() request to each one.
+Ensure that the for-loop uses Sys.sleep() to delay for 5 seconds between request.
+
+```{r}
+# Construct a vector of 2 URLs
+urls <- c("http://fakeurl.com/api/1.0/","http://fakeurl.com/api/2.0/")
+
+for(url in urls){
+    # Send a GET request to url
+    result <- GET(url)
+    # Delay for 5 seconds between requests
+    Sys.sleep(5)
+}  
+```
+
+### Tying it all together
+
+Using everything that you learned in the chapter, let's make a simple replica of one of the 'pageviews' functions - building queries, sending GET requests (with an appropriate user agent) and handling the output in a fault-tolerant way. To do this, you will use the function stop(), which takes a string as an argument, and stops the execution of the program.
+
+Instructions
+Using the example function structure:
+
+Construct a URL pointing at
+https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/**YOUR_ARTICLE_TITLE**/daily/2015100100/2015103100
+dynamically inserting **YOUR_ARTICLE_TITLE**.
+
+Make the request with a user agent containing a fake email address followed by a sample string: ("my@email.com this is a test").
+Check the result for errors with http_error(), throwing an alert of "the request failed" with stop() if there was one.
+Extract the body of the request with content() before returning it.
+
+```{r}
+get_pageviews <- function(article_title){
+    
+                  url <- paste0("https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents", 
+                  article_title, 
+                  "daily/2015100100/2015103100", sep = "/") 
+                      response <- GET(url, user_agent("my@email.com this is a test")) 
+                        if(http_error(response)){ 
+                          stop("the request failed") 
+                        } else { 
+                            result <- content(response) 
+                            return(result) 
+                        }
+}
+
+```
+
+
 ## Handling JSON and XML
 
 Sometimes data is a TSV or nice plaintext output. Sometimes it's XML and/or JSON. This chapter walks you through what JSON and XML are, how to convert them into R-like objects, and how to extract data from them. You'll practice by examining the revision history for a Wikipedia article retrieved from the Wikipedia API using httr, xml2 and jsonlite.
+
+### Parsing JSON
+
+While JSON is a useful format for sharing data, your first step will often be to parse it into an R object, so you can manipulate it with R.
+
+The content() function in httr retrieves the content from a request. It takes an as argument that specifies the type of output to return. You've already seen that as = "text" will return the content as a character string which is useful for checking the content is as you expect.
+
+If you don't specify as, the default as = "parsed" is used. In this case the type of content() will be guessed based on the header and content() will choose an appropriate parsing function. For JSON this function is fromJSON() from the jsonlite package. If you know your response is JSON, you may want to use fromJSON() directly.
+
+To practice, you'll retrieve some revision history from the Wikipedia API, check it is JSON, then parse it into a list two ways.
+
+Instructions
+Get the revision history for the Wikipedia article for "Hadley Wickham", by calling rev_history("Hadley Wickham") (a function we have written for you), store it in resp_json.
+Check the http_type() of resp_json, to confirm the API returned a JSON object.
+You can't always trust a header, so check the content looks like JSON by calling content() on resp_json with an additional argument, as.
+Parse resp_json using content() by explicitly setting as = "parsed".
+Parse the returned text (from step 3) with fromJSON()
+
+```{r}
+
+rev_history <- function(title, format = "json", n = 5){
+  base_url <- "https://en.wikipedia.org/w/api.php"
+    resp <- GET(base_url, query = list(action = "query", titles = title, prop = "revisions",
+                                       rvprop = "timestamp|user|comment|content", rvlimit = n, 
+                                       format = format, rvdir="newer", rvstart = "2015-01-14T17:12:45Z",
+                                       rvsection = 0))
+    resp }
+    
+    had_json <- rev_history("Hadley Wickham")
+    saveRDS(had_json, file = "had_rev_json.rds")
+    had_xml <- rev_history("Hadley Wickham", format = "xml", n = 5)
+    saveRDS(had_xml, file = "had_rev_xml.rds")
+    # Rewritten to not actually call API
+    # download.file("http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_json.rds", "had_rev_json.rds")
+    # download.file("http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_xml.rds", "had_rev_xml.rds")    
+    # 
+rev_history <- function(title, format = "json"){
+  if (title != "Hadley Wickham") {
+    stop('rev_history() only works for `title = "Hadley Wickham"`')
+  }
+  
+  if (format == "json"){
+    resp <- readRDS("had_rev_json.rds")
+  } else if (format == "xml"){
+    resp <- readRDS("had_rev_xml.rds")
+  } else {
+    stop('Invalid format supplied, try "json" or "xml"')
+  }
+  resp  
+}
+
+
+# Get revision history for "Hadley Wickham"
+resp_json <- rev_history("Hadley Wickham")
+
+# Check http_type() of resp_json
+http_type(resp_json)
+
+# Examine returned text with content()
+content(resp_json, as = "text")
+
+# Parse response with content()
+content(resp_json, as = "parsed")
+
+# Parse returned text with fromJSON()
+library(jsonlite)
+fromJSON(content(resp_json, as = "text"))
+```
+
+### Manipulating parsed JSON
+
+As you saw in the video, the output from parsing JSON is a list. One way to extract relevant data from that list is to use a package specifically designed for manipulating lists, rlist.
+
+rlist provides two particularly useful functions for selecting and combining elements from a list: list.select() and list.stack(). list.select() extracts sub-elements by name from each element in a list. For example using the parsed movies data from the video (movies_list), we might ask for the title and year elements from each element:
+
+list.select(movies_list, title, year)
+The result is still a list, that is where list.stack() comes in. It will stack the elements of a list into a data frame.
+
+list.stack(
+    list.select(movies_list, title, year)
+)
+In this exercise you'll use these rlist functions to create a data frame with the user and timestamp for each revision.
+
+Instructions
+First, you'll need to figure out where the revisions are. Examine the output from the str() call. Can you see where the list of 5 revisions is?
+Store the revisions in revs.
+Use list.select() to pull out the user and timestamp elements from each revision, store in user_time.
+Print user_time to verify it's a list with one element for each revision.
+Use list.stack() to stack the lists into a data frame.
+
+```{r}
+# Load rlist
+library(rlist)
+
+# Examine output of this code
+str(content(resp_json), max.level = 4)
+
+# Store revision list
+revs <- content(resp_json)$query$pages$`41916270`$revisions
+
+# Extract the user element
+user_time <- list.select(revs, user, timestamp)
+
+# Print user_time
+user_time
+
+# Stack to turn into a data frame
+list.stack(user_time)
+```
+
+
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+
+
+
 
 Web scraping with XPATHs
 
