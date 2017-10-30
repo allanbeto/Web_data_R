@@ -128,13 +128,33 @@ $(document).ready(function () {
 # install.packages(&quot;jsonlite&quot;)
 # install.packages(&quot;xml2&quot;)
 # install.packages(&quot;birdnik&quot;)
+#install.packages(&quot;rlist&quot;)
+# install.packages(&quot;dplyr&quot;)
+#install.packages(&quot;readr&quot;)
 
 library(&quot;httr&quot;)
-library(&quot;rvest&quot;)</code></pre>
-<pre><code>## Loading required package: xml2</code></pre>
-<pre class="r"><code>library(&quot;jsonlite&quot;)
 library(&quot;xml2&quot;)
-library(&quot;birdnik&quot;)</code></pre>
+library(&quot;rvest&quot;)
+library(&quot;jsonlite&quot;)
+library(&quot;birdnik&quot;)
+library(&quot;rlist&quot;)
+library(&quot;dplyr&quot;)</code></pre>
+<pre><code>## 
+## Attaching package: 'dplyr'</code></pre>
+<pre><code>## The following objects are masked from 'package:stats':
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(&quot;readr&quot;)</code></pre>
+<pre><code>## 
+## Attaching package: 'readr'</code></pre>
+<pre><code>## The following object is masked from 'package:rvest':
+## 
+##     guess_encoding</code></pre>
+<pre class="r"><code># download.file(&quot;http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_json.rds&quot;,  &quot;had_rev_json.rds&quot;)
+# download.file(&quot;http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_xml.rds&quot;, &quot;had_rev_xml.rds&quot;)</code></pre>
 <div id="course-description" class="section level1">
 <h1>Course Description</h1>
 <p>Most of the useful data in the world, from economic data to news content to geographic information, lives somewhere on the internet - and this course will teach you how to access it. You’ll explore how to work with APIs (computer-readable interfaces to websites), access data from Wikipedia and other sources, and build your own simple API client. For those occasions where APIs are not available, you’ll find out how to use R to scrape information out of web pages. In the process you’ll learn how to get data out of even the most stubborn website, and how to turn it into a format ready for further analysis. The packages you’ll use and learn your way around are rvest, httr, xml2 and jsonlite, along with particular API client packages like WikipediR and pageviews.</p>
@@ -181,7 +201,7 @@ head(csv_data)</code></pre>
 <p>Helpfully, R has download.file(), a function that lets you do just that: download a file to a location of your choice on your computer. It takes two arguments; url, indicating the URL to read from, and destfile, the destination to write the downloaded file to. In this case, we’ve pre-defined the URL - once again, it’s csv_url.</p>
 <p>Instructions Download the file at csv_url with download.file(), naming the destination file “feed_data.csv”. Read “feed_data.csv” into R with read.csv().</p>
 <pre class="r"><code># Download the file with download.file()
-download.file(url = csv_url, destfile = &quot;feed_data.csv&quot;)
+# download.file(url = csv_url, destfile = &quot;feed_data.csv&quot;)
 
 # Read it in with read.csv()
 csv_data &lt;- read.csv(&quot;feed_data.csv&quot;)</code></pre>
@@ -246,14 +266,1143 @@ vector_frequency &lt;- word_frequency(api_key, &quot;vector&quot;)</code></pre>
 <div id="using-httr-to-interact-with-apis-directly" class="section level2">
 <h2>Using httr to interact with APIs directly</h2>
 <p>If an API client doesn’t exist, it’s up to you to communicate directly with the API. But don’t worry, the package <code>httr</code> makes this really straightforward. In this chapter you’ll learn how to make web requests from R, how to examine the responses you get back and some best practices for doing this in a responsible way.</p>
+<div id="get-requests-in-practice" class="section level3">
+<h3>GET requests in practice</h3>
+<p>To start with you’re going to make a GET request. As discussed in the video, this is a request that asks the server to give you a particular piece of data or content (usually specified in the URL). These make up the majority of the requests you’ll make in a data science context, since most of the time you’ll be getting data from servers, not giving it to them.</p>
+<p>To do this you’ll use the httr package, written by Hadley Wickham (of course), which makes HTTP requests extremely easy. You’re going to make a very simple GET request, and then inspect the output to see what it looks like.</p>
+<p>Instructions Load the httr package. Use the GET() function to make a request to <a href="http://httpbin.org/get" class="uri">http://httpbin.org/get</a>, saving the result to get_result. Print get_result to inspect it.</p>
+<pre class="r"><code>  # Load the httr package
+library(&quot;httr&quot;)
+
+# Make a GET request to http://httpbin.org/get
+get_result &lt;- GET(&quot;http://httpbin.org/get&quot;)
+
+# Print it to inspect it
+get_result</code></pre>
+<pre><code>## Response [http://httpbin.org/get]
+##   Date: 2017-10-30 05:08
+##   Status: 200
+##   Content-Type: application/json
+##   Size: 326 B
+## {
+##   &quot;args&quot;: {}, 
+##   &quot;headers&quot;: {
+##     &quot;Accept&quot;: &quot;application/json, text/xml, application/xml, */*&quot;, 
+##     &quot;Accept-Encoding&quot;: &quot;gzip, deflate&quot;, 
+##     &quot;Connection&quot;: &quot;close&quot;, 
+##     &quot;Host&quot;: &quot;httpbin.org&quot;, 
+##     &quot;User-Agent&quot;: &quot;libcurl/7.56.0 r-curl/3.0 httr/1.3.1&quot;
+##   }, 
+##   &quot;origin&quot;: &quot;201.141.194.54&quot;, 
+## ...</code></pre>
+</div>
+<div id="post-requests-in-practice" class="section level3">
+<h3>POST requests in practice</h3>
+<p>Next we’ll look at POST requests, also made through httr, with the function (you’ve guessed it) POST(). Rather than asking the server to give you something, as in GET requests, a POST request asks the server to accept something from you. They’re commonly used for things like file upload, or authentication. As a result of their use for uploading things, POST() accepts not just a url but also a body argument containing whatever you want to give to the server.</p>
+<p>You’ll make a very simple POST request, just uploading a piece of text, and then inspect the output to see what it looks like.</p>
+<p>Instructions Load the httr package. Make a POST request with the URL <a href="http://httpbin.org/post" class="uri">http://httpbin.org/post</a> and the body “this is a test”, saving the result to post_result. Print post_result to inspect it.</p>
+<pre class="r"><code>  # Load the httr package
+library(&quot;httr&quot;)
+
+# Make a POST request to http://httpbin.org/post with the body &quot;this is a test&quot;
+post_result &lt;- POST(&quot;http://httpbin.org/post&quot;, body = &quot;this is a test&quot;)
+
+# Print it to inspect it
+post_result      </code></pre>
+<pre><code>## Response [http://httpbin.org/post]
+##   Date: 2017-10-30 05:08
+##   Status: 200
+##   Content-Type: application/json
+##   Size: 433 B
+## {
+##   &quot;args&quot;: {}, 
+##   &quot;data&quot;: &quot;this is a test&quot;, 
+##   &quot;files&quot;: {}, 
+##   &quot;form&quot;: {}, 
+##   &quot;headers&quot;: {
+##     &quot;Accept&quot;: &quot;application/json, text/xml, application/xml, */*&quot;, 
+##     &quot;Accept-Encoding&quot;: &quot;gzip, deflate&quot;, 
+##     &quot;Connection&quot;: &quot;close&quot;, 
+##     &quot;Content-Length&quot;: &quot;14&quot;, 
+## ...</code></pre>
+<p>Nicely done. The output for POST requests looks pretty similar to that for GET requests, although (in this case) the body of your message is included - this is a test. Again, we’ll dig into certain elements of the output in just a bit.</p>
+</div>
+<div id="extracting-the-response" class="section level3">
+<h3>Extracting the response</h3>
+<p>Making requests is all well and good, but it’s also not why you’re here. What we really want to do is get the data the server sent back, which can be done with httr’s content() function. You pass it an object returned from a GET (or POST, or DELETE, or…) call, and it spits out whatever the server actually sent in an R-compatible structure.</p>
+<p>We’re going to demonstrate that now, using a slightly more complicated URL than before - in fact, using a URL from the Wikimedia pageviews system you dealt with through the pageviews package, which is stored as url. Without looking too much at the structure for the time being (we’ll get to that later) this request asks for the number of pageviews to the English-language Wikipedia’s “Hadley Wickham” article on 1 and 2 January 2017.</p>
+<p>Instructions httr is loaded in your workspace.</p>
+<p>Make a GET request using the url object as the URL. Save the results as pageview_response. Call content() on pageview_response to retrieve the data the server has sent back. Save the data as pageview_data. Examine pageview_data with str()</p>
+<pre class="r"><code>url &lt;- &quot;https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia.org/all-access/all-agents/Hadley_Wickham/daily/20170101/20170102&quot;
+# Make a GET request to url and save the results
+pageview_response &lt;- GET(url)
+
+# Call content() to retrieve the data the server sent back
+pageview_data &lt;- content(pageview_response)
+
+# Examine the results with str()
+str(pageview_data)</code></pre>
+<pre><code>## List of 1
+##  $ items:List of 2
+##   ..$ :List of 7
+##   .. ..$ project    : chr &quot;en.wikipedia&quot;
+##   .. ..$ article    : chr &quot;Hadley_Wickham&quot;
+##   .. ..$ granularity: chr &quot;daily&quot;
+##   .. ..$ timestamp  : chr &quot;2017010100&quot;
+##   .. ..$ access     : chr &quot;all-access&quot;
+##   .. ..$ agent      : chr &quot;all-agents&quot;
+##   .. ..$ views      : int 45
+##   ..$ :List of 7
+##   .. ..$ project    : chr &quot;en.wikipedia&quot;
+##   .. ..$ article    : chr &quot;Hadley_Wickham&quot;
+##   .. ..$ granularity: chr &quot;daily&quot;
+##   .. ..$ timestamp  : chr &quot;2017010200&quot;
+##   .. ..$ access     : chr &quot;all-access&quot;
+##   .. ..$ agent      : chr &quot;all-agents&quot;
+##   .. ..$ views      : int 86</code></pre>
+</div>
+<div id="handling-http-failures" class="section level3">
+<h3>Handling http failures</h3>
+<p>As mentioned, HTTP calls can go wrong. Handling that can be done with httr’s http_error() function, which identifies whether a server response contains an error.</p>
+<p>If the response does contain an error, calling http_error() over the response will produce TRUE; otherwise, FALSE. You can use this for really fine-grained control over results. For example, you could check whether the request contained an error, and (if so) issue a warning and re-try the request.</p>
+<p>For now we’ll try something a bit simpler - issuing a warning that something went wrong if http_error() returns TRUE, and printing the content if it doesn’t.</p>
+<p>Instructions Make a httr GET() request to the URL stored as fake_url, and store the result as request_result. If http_error() returns TRUE, use warning() to issue the warning “The request failed”. If not, use content() (as demonstrated in previous exercises) to print the contents of the result.</p>
+<pre class="r"><code>fake_url &lt;- &quot;http://google.com/fakepagethatdoesnotexist&quot;
+
+# Make the GET request
+request_result &lt;- GET(fake_url)
+
+# Check request_result
+if(http_error(request_result)){
+    TRUE
+    warning(&quot;The request failed&quot;)
+} else {
+    content(request_result)
+}</code></pre>
+<pre><code>## Warning: The request failed</code></pre>
+<p>Constructing queries (Part I) 100xp As briefly discussed in the previous video, the actual API query (which tells the API what you want to do) tends to be in one of the two forms. The first is directory-based, where values are separated by / marks within the URL. The second is parameter-based, where all the values exist at the end of the URL and take the form of key=value.</p>
+<p>Constructing directory-based URLs can be done via paste(), which takes an unlimited number of strings, along with a separator, as sep. So to construct <a href="http://swapi.co/api/vehicles/12" class="uri">http://swapi.co/api/vehicles/12</a> we’d call:</p>
+<p>paste(“<a href="http://swapi.co" class="uri">http://swapi.co</a>”, “api”, “vehicles”, “12”, sep = “/”) Let’s do that now! We’ll cover parameter-based URLs later. In the mean time we can play with SWAPI, mentioned above, which is an API chock full of star wars data. This time, rather than a vehicle, we’ll look for a person.</p>
+<p>Instructions httr is loaded in your workspace.</p>
+<p>Construct a directory-based API URL to <a href="http://swapi.co/api" class="uri">http://swapi.co/api</a>, looking for person 1 in people. Assign the URL to directory_url. Use GET to make an API call with directory_url.</p>
+<pre class="r"><code># Construct a directory-based API URL to `http://swapi.co/api`,
+# looking for person `1` in `people`
+directory_url &lt;- paste(&quot;http://swapi.co/api&quot;, &quot;people&quot;, 1, sep = &quot;/&quot;)
+
+# Make a GET call with it
+result &lt;- GET(directory_url)</code></pre>
+</div>
+<div id="constructing-queries-part-ii" class="section level3">
+<h3>Constructing queries (Part II)</h3>
+<p>As mentioned (albeit briefly) in the last exercise, there are also parameter based URLs, where all the query values exist at the end of the URL and take the form of key=value - they look something like <a href="http://fakeurl.com/foo.php?country=spain&amp;food=goulash" class="uri">http://fakeurl.com/foo.php?country=spain&amp;food=goulash</a></p>
+<p>Constructing parameter-based URLs can also be done with paste(), but the easiest way to do it is with GET() and POST() themselves, which accept a query argument consisting of a list of keys and values. So, to continue with the food-based examples, we could construct fakeurl.com/api.php?fruit=peaches&amp;day=thursday with:</p>
+<p>GET(“fakeurl.com/api.php”, query = list(fruit = “peaches”, day = “thursday”)) In this exercise you’ll construct a call to <a href="https://httpbin.org/get?nationality=americans&amp;country=antigua" class="uri">https://httpbin.org/get?nationality=americans&amp;country=antigua</a>.</p>
+<p>Instructions Start by contructing the query_params list, with a nationality parameter of “americans” and a country parameter of “antigua”. Construct a parameter-based call to <a href="https://httpbin.org/get" class="uri">https://httpbin.org/get</a>, using GET() passing query_params to the query arugment. Print the response parameter_response.</p>
+<pre class="r"><code>  # Create list with nationality and country elements
+query_params &lt;- list(nationality = &quot;americans&quot;, 
+    country = &quot;antigua&quot;)
+    
+# Make parameter-based call to httpbin, with query_params
+parameter_response &lt;- GET(&quot;https://httpbin.org/get&quot;, query = query_params)
+
+# Print parameter_response
+parameter_response</code></pre>
+<pre><code>## Response [https://httpbin.org/get?nationality=americans&amp;country=antigua]
+##   Date: 2017-10-30 05:08
+##   Status: 200
+##   Content-Type: application/json
+##   Size: 426 B
+## {
+##   &quot;args&quot;: {
+##     &quot;country&quot;: &quot;antigua&quot;, 
+##     &quot;nationality&quot;: &quot;americans&quot;
+##   }, 
+##   &quot;headers&quot;: {
+##     &quot;Accept&quot;: &quot;application/json, text/xml, application/xml, */*&quot;, 
+##     &quot;Accept-Encoding&quot;: &quot;gzip, deflate&quot;, 
+##     &quot;Connection&quot;: &quot;close&quot;, 
+##     &quot;Host&quot;: &quot;httpbin.org&quot;, 
+## ...</code></pre>
+</div>
+<div id="using-user-agents" class="section level3">
+<h3>Using user agents</h3>
+<p>As discussed in the video, informative user-agents are a good way of being respectful of the developers running the API you’re interacting with. They make it easy for them to contact you in the event something goes wrong. I always try to include:</p>
+<p>My email address; A URL for the project the code is a part of, if it’s got a URL. Building user agents is done by passing a call to user_agent() into the GET() or POST() request; something like:</p>
+<p>GET(“<a href="http://url.goes.here/" class="uri">http://url.goes.here/</a>”, user_agent(“<a href="mailto:somefakeemail@domain.com">somefakeemail@domain.com</a> <a href="http://project.website" class="uri">http://project.website</a>”)) In the event you don’t have a website, a short one-sentence description of what the project is about serves pretty well.</p>
+<p>Instructions Make a GET() request to url. Include a user agent that has a fake email address “<a href="mailto:my@email.address">my@email.address</a>” followed by the sentence “this is a test”. Assign the response to server_response.</p>
+<pre class="r"><code>  # Do not change the url
+url &lt;- &quot;https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/Aaron_Halfaker/daily/2015100100/2015103100&quot;
+
+# Add the email address and the test sentence inside user_agent()
+server_response &lt;- GET(url, user_agent(&quot;my@email.address this is a test&quot;))</code></pre>
+</div>
+<div id="rate-limiting" class="section level3">
+<h3>Rate-limiting</h3>
+<p>The next stage of respectful API usage is rate-limiting: making sure you only make a certain number of requests to the server in a given time period. What limit is expected will vary from server to server, but the implementation is always pretty much the same and involves a call to Sys.sleep(). This function takes one argument, a number, which represents the number of seconds to “sleep” (pause) the R session for. So if you call Sys.sleep(15), it’ll pause for 15 seconds before allowing further code to run.</p>
+<p>As you can imagine, this is really useful for rate-limiting. Only allowed 4 requests a minute? No problem! Just pause for 15 seconds between each request and you’re guaranteed to never exceed it. Let’s demonstrate now by putting together a little loop that sends multiple requests, on a 10-second time delay.</p>
+<p>Instructions Construct a vector of 2 URLs, <a href="http://fakeurl.com/api/1.0/" class="uri">http://fakeurl.com/api/1.0/</a> and <a href="http://fakeurl.com/api/2.0/" class="uri">http://fakeurl.com/api/2.0/</a>. Write a for-loop that sends a GET() request to each one. Ensure that the for-loop uses Sys.sleep() to delay for 5 seconds between request.</p>
+<pre class="r"><code># Construct a vector of 2 URLs
+urls &lt;- c(&quot;http://fakeurl.com/api/1.0/&quot;,&quot;http://fakeurl.com/api/2.0/&quot;)
+
+for(url in urls){
+    # Send a GET request to url
+    result &lt;- GET(url)
+    # Delay for 5 seconds between requests
+    Sys.sleep(5)
+}  </code></pre>
+</div>
+<div id="tying-it-all-together" class="section level3">
+<h3>Tying it all together</h3>
+<p>Using everything that you learned in the chapter, let’s make a simple replica of one of the ‘pageviews’ functions - building queries, sending GET requests (with an appropriate user agent) and handling the output in a fault-tolerant way. To do this, you will use the function stop(), which takes a string as an argument, and stops the execution of the program.</p>
+<p>Instructions Using the example function structure:</p>
+<p>Construct a URL pointing at <a href="https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/**YOUR_ARTICLE_TITLE**/daily/2015100100/2015103100" class="uri">https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/**YOUR_ARTICLE_TITLE**/daily/2015100100/2015103100</a> dynamically inserting <strong>YOUR_ARTICLE_TITLE</strong>.</p>
+<p>Make the request with a user agent containing a fake email address followed by a sample string: (“<a href="mailto:my@email.com">my@email.com</a> this is a test”). Check the result for errors with http_error(), throwing an alert of “the request failed” with stop() if there was one. Extract the body of the request with content() before returning it.</p>
+<pre class="r"><code>get_pageviews &lt;- function(article_title){
+    
+                  url &lt;- paste0(&quot;https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents&quot;, 
+                  article_title, 
+                  &quot;daily/2015100100/2015103100&quot;, sep = &quot;/&quot;) 
+                      response &lt;- GET(url, user_agent(&quot;my@email.com this is a test&quot;)) 
+                        if(http_error(response)){ 
+                          stop(&quot;the request failed&quot;) 
+                        } else { 
+                            result &lt;- content(response) 
+                            return(result) 
+                        }
+}</code></pre>
+</div>
 </div>
 <div id="handling-json-and-xml" class="section level2">
 <h2>Handling JSON and XML</h2>
 <p>Sometimes data is a TSV or nice plaintext output. Sometimes it’s XML and/or JSON. This chapter walks you through what JSON and XML are, how to convert them into R-like objects, and how to extract data from them. You’ll practice by examining the revision history for a Wikipedia article retrieved from the Wikipedia API using httr, xml2 and jsonlite.</p>
-<p>Web scraping with XPATHs</p>
+<div id="parsing-json" class="section level3">
+<h3>Parsing JSON</h3>
+<p>While JSON is a useful format for sharing data, your first step will often be to parse it into an R object, so you can manipulate it with R.</p>
+<p>The content() function in httr retrieves the content from a request. It takes an as argument that specifies the type of output to return. You’ve already seen that as = “text” will return the content as a character string which is useful for checking the content is as you expect.</p>
+<p>If you don’t specify as, the default as = “parsed” is used. In this case the type of content() will be guessed based on the header and content() will choose an appropriate parsing function. For JSON this function is fromJSON() from the jsonlite package. If you know your response is JSON, you may want to use fromJSON() directly.</p>
+<p>To practice, you’ll retrieve some revision history from the Wikipedia API, check it is JSON, then parse it into a list two ways.</p>
+<p>Instructions Get the revision history for the Wikipedia article for “Hadley Wickham”, by calling rev_history(“Hadley Wickham”) (a function we have written for you), store it in resp_json. Check the http_type() of resp_json, to confirm the API returned a JSON object. You can’t always trust a header, so check the content looks like JSON by calling content() on resp_json with an additional argument, as. Parse resp_json using content() by explicitly setting as = “parsed”. Parse the returned text (from step 3) with fromJSON()</p>
+<pre class="r"><code>rev_history &lt;- function(title, format = &quot;json&quot;, n = 5){
+  base_url &lt;- &quot;https://en.wikipedia.org/w/api.php&quot;
+    resp &lt;- GET(base_url, query = list(action = &quot;query&quot;, titles = title, prop = &quot;revisions&quot;,
+                                       rvprop = &quot;timestamp|user|comment|content&quot;, rvlimit = n, 
+                                       format = format, rvdir=&quot;newer&quot;, rvstart = &quot;2015-01-14T17:12:45Z&quot;,
+                                       rvsection = 0))
+    resp }
+    
+    had_json &lt;- rev_history(&quot;Hadley Wickham&quot;)
+    saveRDS(had_json, file = &quot;had_rev_json.rds&quot;)
+    had_xml &lt;- rev_history(&quot;Hadley Wickham&quot;, format = &quot;xml&quot;, n = 5)
+    saveRDS(had_xml, file = &quot;had_rev_xml.rds&quot;)
+    # Rewritten to not actually call API
+    # download.file(&quot;http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_json.rds&quot;, &quot;had_rev_json.rds&quot;)
+    # download.file(&quot;http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/had_rev_xml.rds&quot;, &quot;had_rev_xml.rds&quot;)    
+    # 
+rev_history &lt;- function(title, format = &quot;json&quot;){
+  if (title != &quot;Hadley Wickham&quot;) {
+    stop('rev_history() only works for `title = &quot;Hadley Wickham&quot;`')
+  }
+  
+  if (format == &quot;json&quot;){
+    resp &lt;- readRDS(&quot;had_rev_json.rds&quot;)
+  } else if (format == &quot;xml&quot;){
+    resp &lt;- readRDS(&quot;had_rev_xml.rds&quot;)
+  } else {
+    stop('Invalid format supplied, try &quot;json&quot; or &quot;xml&quot;')
+  }
+  resp  
+}
+
+
+# Get revision history for &quot;Hadley Wickham&quot;
+resp_json &lt;- rev_history(&quot;Hadley Wickham&quot;)
+
+# Check http_type() of resp_json
+http_type(resp_json)</code></pre>
+<pre><code>## [1] &quot;application/json&quot;</code></pre>
+<pre class="r"><code># Examine returned text with content()
+content(resp_json, as = &quot;text&quot;)</code></pre>
+<pre><code>## [1] &quot;{\&quot;continue\&quot;:{\&quot;rvcontinue\&quot;:\&quot;20150528042700|664370232\&quot;,\&quot;continue\&quot;:\&quot;||\&quot;},\&quot;query\&quot;:{\&quot;pages\&quot;:{\&quot;41916270\&quot;:{\&quot;pageid\&quot;:41916270,\&quot;ns\&quot;:0,\&quot;title\&quot;:\&quot;Hadley Wickham\&quot;,\&quot;revisions\&quot;:[{\&quot;user\&quot;:\&quot;214.28.226.251\&quot;,\&quot;anon\&quot;:\&quot;\&quot;,\&quot;timestamp\&quot;:\&quot;2015-01-14T17:12:45Z\&quot;,\&quot;comment\&quot;:\&quot;\&quot;,\&quot;contentformat\&quot;:\&quot;text/x-wiki\&quot;,\&quot;contentmodel\&quot;:\&quot;wikitext\&quot;,\&quot;*\&quot;:\&quot;'''Hadley Mary Helen Wickham III''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\\\&quot;about\\\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\\n\\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\\\&quot;about\\\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;\&quot;},{\&quot;user\&quot;:\&quot;73.183.151.193\&quot;,\&quot;anon\&quot;:\&quot;\&quot;,\&quot;timestamp\&quot;:\&quot;2015-01-15T15:49:34Z\&quot;,\&quot;comment\&quot;:\&quot;\&quot;,\&quot;contentformat\&quot;:\&quot;text/x-wiki\&quot;,\&quot;contentmodel\&quot;:\&quot;wikitext\&quot;,\&quot;*\&quot;:\&quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\\\&quot;about\\\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\\n\\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\\\&quot;about\\\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;\&quot;},{\&quot;user\&quot;:\&quot;FeanorStar7\&quot;,\&quot;timestamp\&quot;:\&quot;2015-01-24T16:34:31Z\&quot;,\&quot;comment\&quot;:\&quot;/* External links */ add LCCN and cats\&quot;,\&quot;contentformat\&quot;:\&quot;text/x-wiki\&quot;,\&quot;contentmodel\&quot;:\&quot;wikitext\&quot;,\&quot;*\&quot;:\&quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\\\&quot;about\\\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\\n\\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\\\&quot;about\\\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;\&quot;},{\&quot;user\&quot;:\&quot;KasparBot\&quot;,\&quot;timestamp\&quot;:\&quot;2015-04-26T19:18:17Z\&quot;,\&quot;comment\&quot;:\&quot;authority control moved to wikidata\&quot;,\&quot;contentformat\&quot;:\&quot;text/x-wiki\&quot;,\&quot;contentmodel\&quot;:\&quot;wikitext\&quot;,\&quot;*\&quot;:\&quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\\\&quot;about\\\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\\n\\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\\\&quot;about\\\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;\&quot;},{\&quot;user\&quot;:\&quot;Spkal\&quot;,\&quot;timestamp\&quot;:\&quot;2015-05-06T18:24:57Z\&quot;,\&quot;comment\&quot;:\&quot;/* Bibliography */  Added his new book, R Packages\&quot;,\&quot;contentformat\&quot;:\&quot;text/x-wiki\&quot;,\&quot;contentmodel\&quot;:\&quot;wikitext\&quot;,\&quot;*\&quot;:\&quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\\\&quot;about\\\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\\n\\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\\\&quot;about\\\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;\&quot;}]}}}}&quot;</code></pre>
+<pre class="r"><code># Parse response with content()
+content(resp_json, as = &quot;parsed&quot;)</code></pre>
+<pre><code>## $continue
+## $continue$rvcontinue
+## [1] &quot;20150528042700|664370232&quot;
+## 
+## $continue$continue
+## [1] &quot;||&quot;
+## 
+## 
+## $query
+## $query$pages
+## $query$pages$`41916270`
+## $query$pages$`41916270`$pageid
+## [1] 41916270
+## 
+## $query$pages$`41916270`$ns
+## [1] 0
+## 
+## $query$pages$`41916270`$title
+## [1] &quot;Hadley Wickham&quot;
+## 
+## $query$pages$`41916270`$revisions
+## $query$pages$`41916270`$revisions[[1]]
+## $query$pages$`41916270`$revisions[[1]]$user
+## [1] &quot;214.28.226.251&quot;
+## 
+## $query$pages$`41916270`$revisions[[1]]$anon
+## [1] &quot;&quot;
+## 
+## $query$pages$`41916270`$revisions[[1]]$timestamp
+## [1] &quot;2015-01-14T17:12:45Z&quot;
+## 
+## $query$pages$`41916270`$revisions[[1]]$comment
+## [1] &quot;&quot;
+## 
+## $query$pages$`41916270`$revisions[[1]]$contentformat
+## [1] &quot;text/x-wiki&quot;
+## 
+## $query$pages$`41916270`$revisions[[1]]$contentmodel
+## [1] &quot;wikitext&quot;
+## 
+## $query$pages$`41916270`$revisions[[1]]$`*`
+## [1] &quot;'''Hadley Mary Helen Wickham III''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;
+## 
+## 
+## $query$pages$`41916270`$revisions[[2]]
+## $query$pages$`41916270`$revisions[[2]]$user
+## [1] &quot;73.183.151.193&quot;
+## 
+## $query$pages$`41916270`$revisions[[2]]$anon
+## [1] &quot;&quot;
+## 
+## $query$pages$`41916270`$revisions[[2]]$timestamp
+## [1] &quot;2015-01-15T15:49:34Z&quot;
+## 
+## $query$pages$`41916270`$revisions[[2]]$comment
+## [1] &quot;&quot;
+## 
+## $query$pages$`41916270`$revisions[[2]]$contentformat
+## [1] &quot;text/x-wiki&quot;
+## 
+## $query$pages$`41916270`$revisions[[2]]$contentmodel
+## [1] &quot;wikitext&quot;
+## 
+## $query$pages$`41916270`$revisions[[2]]$`*`
+## [1] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;
+## 
+## 
+## $query$pages$`41916270`$revisions[[3]]
+## $query$pages$`41916270`$revisions[[3]]$user
+## [1] &quot;FeanorStar7&quot;
+## 
+## $query$pages$`41916270`$revisions[[3]]$timestamp
+## [1] &quot;2015-01-24T16:34:31Z&quot;
+## 
+## $query$pages$`41916270`$revisions[[3]]$comment
+## [1] &quot;/* External links */ add LCCN and cats&quot;
+## 
+## $query$pages$`41916270`$revisions[[3]]$contentformat
+## [1] &quot;text/x-wiki&quot;
+## 
+## $query$pages$`41916270`$revisions[[3]]$contentmodel
+## [1] &quot;wikitext&quot;
+## 
+## $query$pages$`41916270`$revisions[[3]]$`*`
+## [1] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;
+## 
+## 
+## $query$pages$`41916270`$revisions[[4]]
+## $query$pages$`41916270`$revisions[[4]]$user
+## [1] &quot;KasparBot&quot;
+## 
+## $query$pages$`41916270`$revisions[[4]]$timestamp
+## [1] &quot;2015-04-26T19:18:17Z&quot;
+## 
+## $query$pages$`41916270`$revisions[[4]]$comment
+## [1] &quot;authority control moved to wikidata&quot;
+## 
+## $query$pages$`41916270`$revisions[[4]]$contentformat
+## [1] &quot;text/x-wiki&quot;
+## 
+## $query$pages$`41916270`$revisions[[4]]$contentmodel
+## [1] &quot;wikitext&quot;
+## 
+## $query$pages$`41916270`$revisions[[4]]$`*`
+## [1] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;
+## 
+## 
+## $query$pages$`41916270`$revisions[[5]]
+## $query$pages$`41916270`$revisions[[5]]$user
+## [1] &quot;Spkal&quot;
+## 
+## $query$pages$`41916270`$revisions[[5]]$timestamp
+## [1] &quot;2015-05-06T18:24:57Z&quot;
+## 
+## $query$pages$`41916270`$revisions[[5]]$comment
+## [1] &quot;/* Bibliography */  Added his new book, R Packages&quot;
+## 
+## $query$pages$`41916270`$revisions[[5]]$contentformat
+## [1] &quot;text/x-wiki&quot;
+## 
+## $query$pages$`41916270`$revisions[[5]]$contentmodel
+## [1] &quot;wikitext&quot;
+## 
+## $query$pages$`41916270`$revisions[[5]]$`*`
+## [1] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;</code></pre>
+<pre class="r"><code># Parse returned text with fromJSON()
+library(jsonlite)
+fromJSON(content(resp_json, as = &quot;text&quot;))</code></pre>
+<pre><code>## $continue
+## $continue$rvcontinue
+## [1] &quot;20150528042700|664370232&quot;
+## 
+## $continue$continue
+## [1] &quot;||&quot;
+## 
+## 
+## $query
+## $query$pages
+## $query$pages$`41916270`
+## $query$pages$`41916270`$pageid
+## [1] 41916270
+## 
+## $query$pages$`41916270`$ns
+## [1] 0
+## 
+## $query$pages$`41916270`$title
+## [1] &quot;Hadley Wickham&quot;
+## 
+## $query$pages$`41916270`$revisions
+##             user anon            timestamp
+## 1 214.28.226.251      2015-01-14T17:12:45Z
+## 2 73.183.151.193      2015-01-15T15:49:34Z
+## 3    FeanorStar7 &lt;NA&gt; 2015-01-24T16:34:31Z
+## 4      KasparBot &lt;NA&gt; 2015-04-26T19:18:17Z
+## 5          Spkal &lt;NA&gt; 2015-05-06T18:24:57Z
+##                                              comment contentformat
+## 1                                                      text/x-wiki
+## 2                                                      text/x-wiki
+## 3             /* External links */ add LCCN and cats   text/x-wiki
+## 4                authority control moved to wikidata   text/x-wiki
+## 5 /* Bibliography */  Added his new book, R Packages   text/x-wiki
+##   contentmodel
+## 1     wikitext
+## 2     wikitext
+## 3     wikitext
+## 4     wikitext
+## 5     wikitext
+##                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            *
+## 1 '''Hadley Mary Helen Wickham III''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=&quot;about&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=&quot;about&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;
+## 2                '''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=&quot;about&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=&quot;about&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;
+## 3                '''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=&quot;about&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=&quot;about&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;
+## 4                '''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=&quot;about&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=&quot;about&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;
+## 5                '''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=&quot;about&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=&quot;about&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;</code></pre>
+</div>
+<div id="manipulating-parsed-json" class="section level3">
+<h3>Manipulating parsed JSON</h3>
+<p>As you saw in the video, the output from parsing JSON is a list. One way to extract relevant data from that list is to use a package specifically designed for manipulating lists, rlist.</p>
+<p>rlist provides two particularly useful functions for selecting and combining elements from a list: list.select() and list.stack(). list.select() extracts sub-elements by name from each element in a list. For example using the parsed movies data from the video (movies_list), we might ask for the title and year elements from each element:</p>
+<p>list.select(movies_list, title, year) The result is still a list, that is where list.stack() comes in. It will stack the elements of a list into a data frame.</p>
+<p>list.stack( list.select(movies_list, title, year) ) In this exercise you’ll use these rlist functions to create a data frame with the user and timestamp for each revision.</p>
+<p>Instructions First, you’ll need to figure out where the revisions are. Examine the output from the str() call. Can you see where the list of 5 revisions is? Store the revisions in revs. Use list.select() to pull out the user and timestamp elements from each revision, store in user_time. Print user_time to verify it’s a list with one element for each revision. Use list.stack() to stack the lists into a data frame.</p>
+<pre class="r"><code># Load rlist
+library(rlist)
+
+# Examine output of this code
+str(content(resp_json), max.level = 4)</code></pre>
+<pre><code>## List of 2
+##  $ continue:List of 2
+##   ..$ rvcontinue: chr &quot;20150528042700|664370232&quot;
+##   ..$ continue  : chr &quot;||&quot;
+##  $ query   :List of 1
+##   ..$ pages:List of 1
+##   .. ..$ 41916270:List of 4
+##   .. .. ..$ pageid   : int 41916270
+##   .. .. ..$ ns       : int 0
+##   .. .. ..$ title    : chr &quot;Hadley Wickham&quot;
+##   .. .. ..$ revisions:List of 5</code></pre>
+<pre class="r"><code># Store revision list
+revs &lt;- content(resp_json)$query$pages$`41916270`$revisions
+
+# Extract the user element
+user_time &lt;- list.select(revs, user, timestamp)
+
+# Print user_time
+user_time</code></pre>
+<pre><code>## [[1]]
+## [[1]]$user
+## [1] &quot;214.28.226.251&quot;
+## 
+## [[1]]$timestamp
+## [1] &quot;2015-01-14T17:12:45Z&quot;
+## 
+## 
+## [[2]]
+## [[2]]$user
+## [1] &quot;73.183.151.193&quot;
+## 
+## [[2]]$timestamp
+## [1] &quot;2015-01-15T15:49:34Z&quot;
+## 
+## 
+## [[3]]
+## [[3]]$user
+## [1] &quot;FeanorStar7&quot;
+## 
+## [[3]]$timestamp
+## [1] &quot;2015-01-24T16:34:31Z&quot;
+## 
+## 
+## [[4]]
+## [[4]]$user
+## [1] &quot;KasparBot&quot;
+## 
+## [[4]]$timestamp
+## [1] &quot;2015-04-26T19:18:17Z&quot;
+## 
+## 
+## [[5]]
+## [[5]]$user
+## [1] &quot;Spkal&quot;
+## 
+## [[5]]$timestamp
+## [1] &quot;2015-05-06T18:24:57Z&quot;</code></pre>
+<pre class="r"><code># Stack to turn into a data frame
+list.stack(user_time)</code></pre>
+<pre><code>##             user            timestamp
+## 1 214.28.226.251 2015-01-14T17:12:45Z
+## 2 73.183.151.193 2015-01-15T15:49:34Z
+## 3    FeanorStar7 2015-01-24T16:34:31Z
+## 4      KasparBot 2015-04-26T19:18:17Z
+## 5          Spkal 2015-05-06T18:24:57Z</code></pre>
+<p>Reformatting JSON</p>
+<p>Of course you don’t have to use rlist. You can achieve the same thing by using functions from base R or the tidyverse. In this exercise you’ll repeat the task of extracting the username and timestamp using the dplyr package which is part of the tidyverse.</p>
+<p>Conceptually, you’ll take the list of revisions, stack them into a data frame, then pull out the relevant columns.</p>
+<p>dplyr’s bind_rows() function takes a list and turns it into a data frame. Then you can use select() to extract the relevant columns. And of course if we can make use of the %&gt;% (pipe) operator to chain them all together.</p>
+<p>Try it!</p>
+<p>Instructions Pipe the list of revisions into bind_rows(). Use select() to extract the user and timestamp columns.</p>
+<pre class="r"><code># Load dplyr
+library(dplyr)
+
+# Pull out revision list
+revs &lt;- content(resp_json)$query$pages$`41916270`$revisions
+
+# Extract user and timestamp
+revs %&gt;%
+  bind_rows %&gt;%           
+  select(user, timestamp)</code></pre>
+<pre><code>## # A tibble: 5 x 2
+##             user            timestamp
+##            &lt;chr&gt;                &lt;chr&gt;
+## 1 214.28.226.251 2015-01-14T17:12:45Z
+## 2 73.183.151.193 2015-01-15T15:49:34Z
+## 3    FeanorStar7 2015-01-24T16:34:31Z
+## 4      KasparBot 2015-04-26T19:18:17Z
+## 5          Spkal 2015-05-06T18:24:57Z</code></pre>
+</div>
+<div id="examining-xml-documents" class="section level3">
+<h3>Examining XML documents</h3>
+<p>Just like JSON, you should first verify the response is indeed XML with http_type() and by examining the result of content(r, as = “text”). Then you can turn the response into an XML document object with read_xml().</p>
+<p>One benefit of using the XML document object is the available functions that help you explore and manipulate the document. For example xml_structure() will print a representation of the XML document that emphasizes the hierarchical structure by displaying the elements without the data.</p>
+<p>In this exercise you’ll grab the same revision history you’ve been working with as XML, and take a look at it with xml_structure().</p>
+<p>Instructions Get the XML version of the revision history for the Wikipedia article for “Hadley Wickham”, by calling rev_history(“Hadley Wickham”, format = “xml”), store it in resp_xml. Check the response type of resp_xml to confirm the API returned an XML object. You can’t always trust a header, so check the content looks like XML by calling content() on resp_xml with as = “text”, store in rev_text. Turn rev_text into an XML object with read_xml() from the xml2 package, store as rev_xml. Call xml_structure() on rev_xml to see the structure of the returned XML. Can you see where the revisions are?</p>
+<pre class="r"><code># Load xml2
+library(xml2)
+
+# Get XML revision history
+resp_xml &lt;- rev_history(&quot;Hadley Wickham&quot;, format = &quot;xml&quot;)
+
+# Check response is XML 
+http_type(resp_xml)</code></pre>
+<pre><code>## [1] &quot;text/xml&quot;</code></pre>
+<pre class="r"><code># Examine returned text with content()
+rev_text &lt;- content(resp_xml, as = &quot;text&quot;)
+rev_text</code></pre>
+<pre><code>## [1] &quot;&lt;?xml version=\&quot;1.0\&quot;?&gt;&lt;api&gt;&lt;continue rvcontinue=\&quot;20150528042700|664370232\&quot; continue=\&quot;||\&quot; /&gt;&lt;query&gt;&lt;pages&gt;&lt;page _idx=\&quot;41916270\&quot; pageid=\&quot;41916270\&quot; ns=\&quot;0\&quot; title=\&quot;Hadley Wickham\&quot;&gt;&lt;revisions&gt;&lt;rev user=\&quot;214.28.226.251\&quot; anon=\&quot;\&quot; timestamp=\&quot;2015-01-14T17:12:45Z\&quot; comment=\&quot;\&quot; contentformat=\&quot;text/x-wiki\&quot; contentmodel=\&quot;wikitext\&quot; xml:space=\&quot;preserve\&quot;&gt;'''Hadley Mary Helen Wickham III''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&amp;lt;ref&amp;gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&amp;lt;ref name=&amp;quot;about&amp;quot;&amp;gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&amp;lt;/ref&amp;gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&amp;lt;ref&amp;gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&amp;lt;/ref&amp;gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&amp;lt;ref&amp;gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&amp;lt;ref name=&amp;quot;about&amp;quot; /&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;&lt;/rev&gt;&lt;rev user=\&quot;73.183.151.193\&quot; anon=\&quot;\&quot; timestamp=\&quot;2015-01-15T15:49:34Z\&quot; comment=\&quot;\&quot; contentformat=\&quot;text/x-wiki\&quot; contentmodel=\&quot;wikitext\&quot; xml:space=\&quot;preserve\&quot;&gt;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&amp;lt;ref&amp;gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&amp;lt;ref name=&amp;quot;about&amp;quot;&amp;gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&amp;lt;/ref&amp;gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&amp;lt;ref&amp;gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&amp;lt;/ref&amp;gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&amp;lt;ref&amp;gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&amp;lt;ref name=&amp;quot;about&amp;quot; /&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;&lt;/rev&gt;&lt;rev user=\&quot;FeanorStar7\&quot; timestamp=\&quot;2015-01-24T16:34:31Z\&quot; comment=\&quot;/* External links */ add LCCN and cats\&quot; contentformat=\&quot;text/x-wiki\&quot; contentmodel=\&quot;wikitext\&quot; xml:space=\&quot;preserve\&quot;&gt;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&amp;lt;ref&amp;gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&amp;lt;ref name=&amp;quot;about&amp;quot;&amp;gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&amp;lt;/ref&amp;gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&amp;lt;ref&amp;gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&amp;lt;/ref&amp;gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&amp;lt;ref&amp;gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&amp;lt;ref name=&amp;quot;about&amp;quot; /&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;&lt;/rev&gt;&lt;rev user=\&quot;KasparBot\&quot; timestamp=\&quot;2015-04-26T19:18:17Z\&quot; comment=\&quot;authority control moved to wikidata\&quot; contentformat=\&quot;text/x-wiki\&quot; contentmodel=\&quot;wikitext\&quot; xml:space=\&quot;preserve\&quot;&gt;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&amp;lt;ref&amp;gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&amp;lt;ref name=&amp;quot;about&amp;quot;&amp;gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&amp;lt;/ref&amp;gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&amp;lt;ref&amp;gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&amp;lt;/ref&amp;gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&amp;lt;ref&amp;gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&amp;lt;ref name=&amp;quot;about&amp;quot; /&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;&lt;/rev&gt;&lt;rev user=\&quot;Spkal\&quot; timestamp=\&quot;2015-05-06T18:24:57Z\&quot; comment=\&quot;/* Bibliography */  Added his new book, R Packages\&quot; contentformat=\&quot;text/x-wiki\&quot; contentmodel=\&quot;wikitext\&quot; xml:space=\&quot;preserve\&quot;&gt;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&amp;lt;ref&amp;gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&amp;lt;/ref&amp;gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&amp;lt;ref name=&amp;quot;about&amp;quot;&amp;gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&amp;lt;/ref&amp;gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&amp;lt;ref&amp;gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&amp;lt;/ref&amp;gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&amp;lt;ref&amp;gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&amp;lt;ref name=&amp;quot;about&amp;quot; /&amp;gt;&amp;lt;ref&amp;gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&amp;lt;/ref&amp;gt;&lt;/rev&gt;&lt;/revisions&gt;&lt;/page&gt;&lt;/pages&gt;&lt;/query&gt;&lt;/api&gt;&quot;</code></pre>
+<pre class="r"><code># Turn rev_text into an XML document
+rev_xml &lt;- read_xml(rev_text)
+
+# Examine the structure of rev_xml
+xml_structure(rev_xml)</code></pre>
+<pre><code>## &lt;api&gt;
+##   &lt;continue [rvcontinue, continue]&gt;
+##   &lt;query&gt;
+##     &lt;pages&gt;
+##       &lt;page [_idx, pageid, ns, title]&gt;
+##         &lt;revisions&gt;
+##           &lt;rev [user, anon, timestamp, comment, contentformat, contentmodel, space]&gt;
+##             {text}
+##           &lt;rev [user, anon, timestamp, comment, contentformat, contentmodel, space]&gt;
+##             {text}
+##           &lt;rev [user, timestamp, comment, contentformat, contentmodel, space]&gt;
+##             {text}
+##           &lt;rev [user, timestamp, comment, contentformat, contentmodel, space]&gt;
+##             {text}
+##           &lt;rev [user, timestamp, comment, contentformat, contentmodel, space]&gt;
+##             {text}</code></pre>
+</div>
+<div id="extracting-xml-data" class="section level3">
+<h3>Extracting XML data</h3>
+<p>XPATHs are designed to specifying nodes in an XML document. Remember /node_name specifies nodes at the current level that have the tag node_name, where as //node_name specifies nodes at any level below the current level that have the tag node_name.</p>
+<p>xml2 provides the function xml_find_all() to extract nodes that match a given XPATH. For example, xml_find_all(rev_xml, “/api”) will find all the nodes at the top level of the rev_xml document that have the tag api. Try running that in the console. You’ll get a nodeset of one node because there is only one node that satisfies that XPATH.</p>
+<p>The object returned from xml_find_all() is a nodeset (think of it like a list of nodes). To actually get data out of the nodes in the nodeset, you’ll have to explicitly ask for it with xml_text() (or xml_double() or xml_integer()).</p>
+<p>Use what you know about the location of the revisions data in the returned XML document extract just the content of the revision.</p>
+<p>Instructions Use xml_find_all() on rev_xml to find all the nodes that describe revisions by using the XPATH, “/api/query/pages/page/revisions/rev”. Use xml_find_all() on rev_xml to find all the nodes that are in a rev node anywhere in the document, store in rev_nodes. Extract the contents from each node in rev_nodes, by passing rev_nodes to xml_text().</p>
+<pre class="r"><code># Find all nodes using XPATH &quot;/api/query/pages/page/revisions/rev&quot;
+xml_find_all(rev_xml, xpath =&quot;/api/query/pages/page/revisions/rev&quot;)</code></pre>
+<pre><code>## {xml_nodeset (5)}
+## [1] &lt;rev user=&quot;214.28.226.251&quot; anon=&quot;&quot; timestamp=&quot;2015-01-14T17:12:45Z&quot;  ...
+## [2] &lt;rev user=&quot;73.183.151.193&quot; anon=&quot;&quot; timestamp=&quot;2015-01-15T15:49:34Z&quot;  ...
+## [3] &lt;rev user=&quot;FeanorStar7&quot; timestamp=&quot;2015-01-24T16:34:31Z&quot; comment=&quot;/* ...
+## [4] &lt;rev user=&quot;KasparBot&quot; timestamp=&quot;2015-04-26T19:18:17Z&quot; comment=&quot;auth ...
+## [5] &lt;rev user=&quot;Spkal&quot; timestamp=&quot;2015-05-06T18:24:57Z&quot; comment=&quot;/* Bibli ...</code></pre>
+<pre class="r"><code># Find all rev nodes anywhere in document
+rev_nodes &lt;- xml_find_all(rev_xml, &quot;//rev&quot;)
+
+# Use xml_text() to get text from rev_nodes
+xml_text(rev_nodes)</code></pre>
+<pre><code>## [1] &quot;'''Hadley Mary Helen Wickham III''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;
+## [2] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;               
+## [3] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;               
+## [4] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;               
+## [5] &quot;'''Hadley Wickham''' is a  [[statistician]] from [[New Zealand]] who is currently Chief Scientist at [[RStudio]]&lt;ref&gt;{{cite web|url=http://washstat.org/wss1310.shtml |title=Washington Statistical Society October 2013 Newsletter |publisher=Washstat.org |date= |accessdate=2014-02-12}}&lt;/ref&gt;&lt;ref&gt;{{cite web|url=http://news.idg.no/cw/art.cfm?id=F66B12BB-D13E-94B0-DAA22F5AB01BEFE7 |title=60+ R resources to improve your data skills ( - Software ) |publisher=News.idg.no |date= |accessdate=2014-02-12}}&lt;/ref&gt; and an [[Professors_in_the_United_States#Adjunct_professor|adjunct]] [[Assistant Professor]] of statistics at [[Rice University]].&lt;ref name=\&quot;about\&quot;&gt;{{cite web|url=http://www.rstudio.com/about/ |title=About - RStudio |accessdate=2014-08-13}}&lt;/ref&gt; He is best known for his development of open-source statistical analysis software packages for [[R (programming language)]] that implement logics of [[data visualisation]] and data transformation. Wickham completed his undergraduate studies at the [[University of Auckland]] and his PhD at [[Iowa State University]] under the supervision of Di Cook and Heike Hoffman.&lt;ref&gt;{{cite web|URL=http://blog.revolutionanalytics.com/2010/09/the-r-files-hadley-wickham.html |title= The R-Files: Hadley Wickham}}&lt;/ref&gt; In 2006 he was awarded the [[John_Chambers_(statistician)|John Chambers]] Award for Statistical Computing for his work developing tools for data reshaping and visualisation.&lt;ref&gt;{{cite web|url=http://stat-computing.org/awards/jmc/winners.html |title=John Chambers Award Past winners|publisher=ASA Sections on Statistical Computing, Statistical Graphics,|date= |accessdate=2014-08-12}}&lt;/ref&gt;\n\nHe is a prominent and active member of the [[R (programming language)|R]] user community and has developed several notable and widely used packages including [[ggplot2]], plyr, dplyr, and reshape2.&lt;ref name=\&quot;about\&quot; /&gt;&lt;ref&gt;{{cite web|url=http://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/ |title=Top 100 R Packages for 2013 (Jan-May)! |publisher=R-statistics blog |date= |accessdate=2014-08-12}}&lt;/ref&gt;&quot;</code></pre>
+</div>
+<div id="extracting-xml-attributes" class="section level3">
+<h3>Extracting XML attributes</h3>
+<p>Not all the useful data will be in the content of a node, some might also be in the attributes of a node. To extract attributes from a nodeset, xml2 provides xml_attrs() and xml_attr().</p>
+<p>xml_attrs() takes a nodeset and returns all of the attributes for every node in the nodeset. xml_attr() takes a nodeset and an additional argument attr to extract a single named argument from each node in the nodeset.</p>
+<p>In this exercise you’ll grab the user and anon attributes for each revision. You’ll see xml_find_first() in the sample code. It works just like xml_find_all() but it only extracts the first node it finds.</p>
+<p>Instructions We’ve extracted rev_nodes and first_rev_node in the document for you to explore the difference between xml_attrs() and xml_attr().</p>
+<p>Use xml_attrs() on first_rev_node to see all the attributes of the first revision node. Use xml_attr() on first_rev_node along with an appropriate attr argument to extract the user attribute from the first revision node. Now use xml_attr() again, but this time on rev_nodes to extract the user attribute from all revision nodes. Use xml_attr() on rev_nodes to extract the anon attribute from all revision nodes.</p>
+<pre class="r"><code># All rev nodes
+rev_nodes &lt;- xml_find_all(rev_xml, &quot;//rev&quot;)
+rev_nodes</code></pre>
+<pre><code>## {xml_nodeset (5)}
+## [1] &lt;rev user=&quot;214.28.226.251&quot; anon=&quot;&quot; timestamp=&quot;2015-01-14T17:12:45Z&quot;  ...
+## [2] &lt;rev user=&quot;73.183.151.193&quot; anon=&quot;&quot; timestamp=&quot;2015-01-15T15:49:34Z&quot;  ...
+## [3] &lt;rev user=&quot;FeanorStar7&quot; timestamp=&quot;2015-01-24T16:34:31Z&quot; comment=&quot;/* ...
+## [4] &lt;rev user=&quot;KasparBot&quot; timestamp=&quot;2015-04-26T19:18:17Z&quot; comment=&quot;auth ...
+## [5] &lt;rev user=&quot;Spkal&quot; timestamp=&quot;2015-05-06T18:24:57Z&quot; comment=&quot;/* Bibli ...</code></pre>
+<pre class="r"><code># The first rev node
+first_rev_node &lt;- xml_find_first(rev_xml, &quot;//rev&quot;)
+first_rev_node</code></pre>
+<pre><code>## {xml_node}
+## &lt;rev user=&quot;214.28.226.251&quot; anon=&quot;&quot; timestamp=&quot;2015-01-14T17:12:45Z&quot; comment=&quot;&quot; contentformat=&quot;text/x-wiki&quot; contentmodel=&quot;wikitext&quot; space=&quot;preserve&quot;&gt;</code></pre>
+<pre class="r"><code># Find all attributes with xml_attrs()
+xml_attrs(first_rev_node)</code></pre>
+<pre><code>##                   user                   anon              timestamp 
+##       &quot;214.28.226.251&quot;                     &quot;&quot; &quot;2015-01-14T17:12:45Z&quot; 
+##                comment          contentformat           contentmodel 
+##                     &quot;&quot;          &quot;text/x-wiki&quot;             &quot;wikitext&quot; 
+##                  space 
+##             &quot;preserve&quot;</code></pre>
+<pre class="r"><code># Find user attribute with xml_attr()
+xml_attr(first_rev_node, attr=&quot;user&quot;)</code></pre>
+<pre><code>## [1] &quot;214.28.226.251&quot;</code></pre>
+<pre class="r"><code># Find user attribute for all rev nodes
+xml_attr(rev_nodes, attr=&quot;user&quot;)</code></pre>
+<pre><code>## [1] &quot;214.28.226.251&quot; &quot;73.183.151.193&quot; &quot;FeanorStar7&quot;    &quot;KasparBot&quot;     
+## [5] &quot;Spkal&quot;</code></pre>
+<pre class="r"><code># Find anon attribute for all rev nodes
+xml_attr(rev_nodes, attr = &quot;anon&quot;)</code></pre>
+<pre><code>## [1] &quot;&quot; &quot;&quot; NA NA NA</code></pre>
+<p>Wrapup: returning nice API output</p>
+<p>How might all this work together? A useful API function will retrieve results from an API and return them in a useful form. In Chapter 2, you finished up by writing a function that retrieves data from an API that relied on content() to convert it to a useful form. To write a more robust API function you shouldn’t rely on content() but instead parse the data yourself.</p>
+<p>To finish up this chapter you’ll do exactly that: write get_revision_history() which retrieves the XML data for the revision history of page on Wikipedia, parses it, and returns it in a nice data frame.</p>
+<p>So that you can focus on the parts of the function that parse the return object, you’ll see your function calls rev_history() to get the response from the API. You can assume this function returns the raw response and follows the best practices you learnt in Chapter 2, like using a user agent, and checking the response status.</p>
+<p>Instructions Fill in the ___ to finish the function definition.</p>
+<p>Use read_xml() to turn the content() of rev_resp as text into an XML object. Use xml_find_all() to find all the rev nodes in the XML. Parse out the “user” attribute from rev_nodes. Parse out the content from rev_nodes using xml_text(). Finally, call get_revision_history() with article_title = “Hadley Wickham”.</p>
+<pre class="r"><code>get_revision_history &lt;- function(article_title){
+  # Get raw revision response
+  rev_resp &lt;- rev_history(article_title, format = &quot;xml&quot;)
+  
+  # Turn the content() of rev_resp into XML
+  rev_xml &lt;- read_xml(content(rev_resp, &quot;text&quot;))
+  
+  # Find revision nodes
+  rev_nodes &lt;- xml_find_all(rev_xml, &quot;//rev&quot;)
+
+  # Parse out usernames
+  user &lt;- xml_attr(rev_nodes, attr = &quot;user&quot;)
+  
+  # Parse out timestamps
+  timestamp &lt;- readr::parse_datetime(xml_attr(rev_nodes, &quot;timestamp&quot;))
+  
+  # Parse out content
+  content &lt;- xml_text(rev_nodes)
+  
+  # Return data frame 
+  data.frame(user = user,
+    timestamp = timestamp,
+    content = substr(content, 1, 40))
+}
+
+# Call function for &quot;Hadley Wickham&quot;
+get_revision_history(&quot;Hadley Wickham&quot;)</code></pre>
+<pre><code>##             user           timestamp
+## 1 214.28.226.251 2015-01-14 17:12:45
+## 2 73.183.151.193 2015-01-15 15:49:34
+## 3    FeanorStar7 2015-01-24 16:34:31
+## 4      KasparBot 2015-04-26 19:18:17
+## 5          Spkal 2015-05-06 18:24:57
+##                                    content
+## 1 '''Hadley Mary Helen Wickham III''' is a
+## 2 '''Hadley Wickham''' is a  [[statisticia
+## 3 '''Hadley Wickham''' is a  [[statisticia
+## 4 '''Hadley Wickham''' is a  [[statisticia
+## 5 '''Hadley Wickham''' is a  [[statisticia</code></pre>
+</div>
+</div>
+<div id="web-scraping-with-xpaths" class="section level2">
+<h2>Web scraping with XPATHs</h2>
 <p>Now that we’ve covered the low-hanging fruit (“it has an API, and a client”, “it has an API”) it’s time to talk about what to do when a website doesn’t have any access mechanisms at all - when you have to rely on web scraping. This chapter will introduce you to the rvest web-scraping package, and build on your previous knowledge of XML manipulation and XPATHs.</p>
-<p>CSS Web Scraping and Final Case Study</p>
+<div id="reading-html" class="section level3">
+<h3>Reading HTML</h3>
+<p>The first step with web scraping is actually reading the HTML in. This can be done with a function from xml2, which is imported by rvest - read_html(). This accepts a single URL, and returns a big blob of XML that we can use further on.</p>
+<p>We’re going to experiment with that by grabbing Hadley Wickham’s wikipedia page, with rvest, and then printing it just to see what the structure looks like.</p>
+<p>Instructions Load the rvest package. Use read_html() to read the URL stored at test_url. Store the results as test_xml. Print test_xml.</p>
+<pre class="r"><code># Load rvest
+library(&quot;rvest&quot;)
+
+# Hadley Wickham's Wikipedia page
+test_url &lt;- &quot;https://en.wikipedia.org/wiki/Hadley_Wickham&quot;
+
+# Read the URL stored as &quot;test_url&quot; with read_html()
+test_xml &lt;- read_html(test_url)
+
+# Print test_xml
+test_xml</code></pre>
+<pre><code>## {xml_document}
+## &lt;html class=&quot;client-nojs&quot; lang=&quot;en&quot; dir=&quot;ltr&quot;&gt;
+## [1] &lt;head&gt;\n&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset= ...
+## [2] &lt;body class=&quot;mediawiki ltr sitedir-ltr mw-hide-empty-elt ns-0 ns-sub ...</code></pre>
+</div>
+<div id="extracting-nodes-by-xpath" class="section level3">
+<h3>Extracting nodes by XPATH</h3>
+<p>Now you’ve got a HTML page read into R. Great! But how do you get individual, identifiable pieces of it?</p>
+<p>The answer is to use html_node(), which extracts individual chunks of HTML from a HTML document. There are a couple of ways of identifying and filtering nodes, and for now we’re going to use XPATHs: unique identifiers for individual pieces of a HTML document.</p>
+<p>These can be retrieved using a browser gadget we’ll talk about later - in the meanwhile the XPATH for the information box in the page you just downloaded is stored as test_node_xpath. We’re going to retrieve the box from the HTML doc with html_node(), using test_node_xpath as the xpath argument.</p>
+<p>Instructions Use html_node() to retrieve the node with the XPATH stored at test_node_xpath from test_xml document you grabbed in the last exercise. Print the first element of the results.</p>
+<pre class="r"><code>test_node_xpath &lt;- &quot;//*[contains(concat( \&quot; \&quot;, @class, \&quot; \&quot; ), concat( \&quot; \&quot;, \&quot;vcard\&quot;, \&quot; \&quot; ))]&quot;
+test_node_xpath</code></pre>
+<pre><code>## [1] &quot;//*[contains(concat( \&quot; \&quot;, @class, \&quot; \&quot; ), concat( \&quot; \&quot;, \&quot;vcard\&quot;, \&quot; \&quot; ))]&quot;</code></pre>
+<pre class="r"><code>  # Use html_node() to grab the node with the XPATH stored as `test_node_xpath`
+node &lt;- html_node(x = test_xml, xpath = test_node_xpath)
+
+# Print the first element of the result
+node[1]</code></pre>
+<pre><code>## $node
+## &lt;pointer: 0x000000001b4ddee0&gt;</code></pre>
+</div>
+<div id="extracting-names" class="section level3">
+<h3>Extracting names</h3>
+The first thing we’ll grab is a name, from the first element of the previously extracted table (now stored as table_element). We can do this with html_name(). As you may recall from when you printed it, the element has the tag
+<table>
+…
+</table>
+<p>, so we’d expect the name to be, well, table.</p>
+<p>Instructions Extract the name of table_element using the function html_name(). Save it as element_name. Print element_name.</p>
+<pre class="r"><code>table_element &lt;- html_node(x = test_xml, xpath = test_node_xpath)
+
+# Extract the name of table_element
+element_name &lt;- html_name(table_element)
+
+# Print the name
+element_name</code></pre>
+<pre><code>## [1] &quot;table&quot;</code></pre>
+</div>
+<div id="extracting-values" class="section level3">
+<h3>Extracting values</h3>
+<p>Just knowing the type of HTML object a node is isn’t much use, though (although it can be very helpful). What we really want is to extract the actual text stored within the value.</p>
+<p>We can do that with (shocker) html_text(), another convenient rvest function that accepts a node and passes back the text inside it. For this we’ll want a node within the extracted element - specifically, the one containing the page title. The xpath value for that node is stored as second_xpath_val.</p>
+<p>Using this xpath value, extract the node within table_element that we want, and then use html_text to extract the text, before printing it.</p>
+<p>Instructions Extract the element of table_element referred to by second_xpath_val and store it as page_name. Extract the text from page_name using html_text(), saving it as page_title. Print page_title.</p>
+<pre class="r"><code>second_xpath_val &lt;- &quot;//*[contains(concat( \&quot; \&quot;, @class, \&quot; \&quot; ), concat( \&quot; \&quot;, \&quot;fn\&quot;, \&quot; \&quot; ))]&quot;
+second_xpath_val</code></pre>
+<pre><code>## [1] &quot;//*[contains(concat( \&quot; \&quot;, @class, \&quot; \&quot; ), concat( \&quot; \&quot;, \&quot;fn\&quot;, \&quot; \&quot; ))]&quot;</code></pre>
+<pre class="r"><code># Extract the element of table_element referred to by second_xpath_val and store it as page_name
+page_name &lt;- html_node(x = table_element, xpath = second_xpath_val)
+
+# Extract the text from page_name
+page_title &lt;- html_text(page_name)
+
+# Print page_title
+page_title</code></pre>
+<pre><code>## [1] &quot;Hadley Wickham&quot;</code></pre>
+</div>
+<div id="extracting-tables" class="section level3">
+<h3>Extracting tables</h3>
+<p>The data from Wikipedia that we’ve been playing around with can be extracted bit by bit and cleaned up manually, but since it’s a table, we have an easier way of turning it into an R object. rvest contains the function html_table() which, as the name suggests, extracts tables. It accepts a node containing a table object, and outputs a data frame.</p>
+<p>Let’s use it now: take the table we’ve extracted, and turn it into a data frame.</p>
+<p>Instructions Turn table_element into a data frame and assign it to wiki_table. Print the resulting object.</p>
+<pre class="r"><code># Turn table_element into a data frame and assign it to wiki_table
+wiki_table &lt;- html_table(table_element)
+
+# Print wiki_table
+wiki_table</code></pre>
+<pre><code>##       Hadley Wickham
+## 1                   
+## 2          Residence
+## 3         Alma mater
+## 4          Known for
+## 5             Awards
+## 6  Scientific career
+## 7             Fields
+## 8             Thesis
+## 9  Doctoral advisors
+## 10                  
+##                                                                       Hadley Wickham
+## 1                                                                                   
+## 2                                                                      United States
+## 3                                      Iowa State University, University of Auckland
+## 4                                                    R programming language packages
+## 5  John Chambers Award (2006)\nFellow of the American Statistical Association (2015)
+## 6                                                                  Scientific career
+## 7                                 Statistics\nData science\nR (programming language)
+## 8                               Practical tools for exploring data and models (2008)
+## 9                                                             Di Cook\nHeike Hofmann
+## 10</code></pre>
+</div>
+<div id="cleaning-a-data-frame" class="section level3">
+<h3>Cleaning a data frame</h3>
+<p>In the last exercise, we looked at extracting tables with html_table(). The resulting data frame was pretty clean, but had two problems - first, the column names weren’t descriptive, and second, there was an empty row.</p>
+<p>In this exercise we’re going to look at fixing both of those problems. First, column names. Column names can be cleaned up with the colnames() function. You call it on the object you want to rename, and then assign to that call a vector of new names.</p>
+<p>The missing row, meanwhile, can be removed with the subset() function. subset takes an object, and a condition. For example, if you have a data frame df containing a column x, you could run</p>
+<p>subset(df, !x == “”) to remove all rows from df consisting of empty strings (“”) in the column x.</p>
+<p>Instructions Rename the columns of wiki_table to “key” and “value” using colnames(). Remove the empty row from wiki_table using subset(), and assign the result to cleaned_table. Print cleaned_table.</p>
+<pre class="r"><code># Rename the columns of wiki_table
+colnames(wiki_table) &lt;- c(&quot;key&quot;, &quot;value&quot;)
+
+# Remove the empty row from wiki_table
+cleaned_table &lt;- subset(wiki_table, !key == &quot;&quot;)
+
+# Print cleaned_table
+cleaned_table</code></pre>
+<pre><code>##                 key
+## 2         Residence
+## 3        Alma mater
+## 4         Known for
+## 5            Awards
+## 6 Scientific career
+## 7            Fields
+## 8            Thesis
+## 9 Doctoral advisors
+##                                                                               value
+## 2                                                                     United States
+## 3                                     Iowa State University, University of Auckland
+## 4                                                   R programming language packages
+## 5 John Chambers Award (2006)\nFellow of the American Statistical Association (2015)
+## 6                                                                 Scientific career
+## 7                                Statistics\nData science\nR (programming language)
+## 8                              Practical tools for exploring data and models (2008)
+## 9                                                            Di Cook\nHeike Hofmann</code></pre>
+</div>
+</div>
+<div id="css-web-scraping-and-final-case-study" class="section level2">
+<h2>CSS Web Scraping and Final Case Study</h2>
 <p>CSS path-based web scraping is a far-more-pleasant alternative to using XPATHs. You’ll start this chapter by learning about CSS, and how to leverage it for web scraping. Then, you’ll work through a final case study that combines everything you’ve learnt so far to write a function that queries an API, parses the response and returns</p>
+<div id="using-css-to-scrape-nodes" class="section level3">
+<h3>Using CSS to scrape nodes</h3>
+<p>As mentioned in the video, CSS is a way to add design information to HTML, that instructs the browser on how to display the content. You can leverage these design instructions to identify content on the page.</p>
+<p>You’ve already used html_node(), but it’s more common with CSS selectors to use html_nodes() since you’ll often want more than one node returned. Both functions allow you to specify a css argument to use a CSS selector, instead of specifying the xpath argument.</p>
+<p>What do CSS selectors look like? Try these examples to see a few possibilities.</p>
+<p>Instructions We’ve read in the same HTML page from Chapter 4, the Wikipedia page for Hadley Wickham, into test_xml.</p>
+<p>Use the CSS selector “table” to select all elements that are a table tag. Use the CSS selector “.infobox” to select all elements that have the attribute class = “infobox”. Use the CSS selector “#firstHeading” to select all elements that have the attribute id = “firstHeading”.</p>
+<pre class="r"><code># Select the table elements
+html_nodes(test_xml, css = &quot;table&quot;)</code></pre>
+<pre><code>## {xml_nodeset (2)}
+## [1] &lt;table class=&quot;infobox biography vcard&quot; style=&quot;width:22em&quot;&gt;\n&lt;tr&gt;\n&lt;t ...
+## [2] &lt;table class=&quot;nowraplinks hlist navbox-inner&quot; style=&quot;border-spacing: ...</code></pre>
+<pre class="r"><code># Select elements with class = &quot;infobox&quot;
+html_nodes(test_xml, css = &quot;.infobox&quot;)</code></pre>
+<pre><code>## {xml_nodeset (1)}
+## [1] &lt;table class=&quot;infobox biography vcard&quot; style=&quot;width:22em&quot;&gt;\n&lt;tr&gt;\n&lt;t ...</code></pre>
+<pre class="r"><code># Select elements with id = &quot;firstHeading&quot;
+html_nodes(test_xml, css = &quot;#firstHeading&quot;)</code></pre>
+<pre><code>## {xml_nodeset (1)}
+## [1] &lt;h1 id=&quot;firstHeading&quot; class=&quot;firstHeading&quot; lang=&quot;en&quot;&gt;Hadley Wickham&lt; ...</code></pre>
+</div>
+<div id="scraping-names" class="section level3">
+<h3>Scraping names</h3>
+<p>You might have noticed in the previous exercise, to select elements with a certain class, you add a . in front of the class name. If you need to select an element based on its id, you add a # in front of the id name.</p>
+<p>For example if this element was inside your HTML document:</p>
+<h1 class="heading" id="intro">
+Introduction
+</h1>
+<p>You could select it by its class using the CSS selector “.heading”, or by its id using the CSS selector “#intro”.</p>
+<p>Once you’ve selected an element with a CSS selector, you can get the element tag name just like you did with XPATH selectors, with html_name(). Try it!</p>
+<p>Instructions The infobox you extracted in Chapter 4 has the class infobox. Use html_nodes() and the appropriate CSS selector to extract the infobox element to infobox_element. Use html_name() to extract the tag name of infobox_element and store it in element_name. Print element_name.</p>
+<pre class="r"><code># Extract element with class infobox
+infobox_element &lt;- html_nodes(test_xml, css = &quot;.infobox&quot;)
+
+# Get tag name of infobox_element
+element_name &lt;- html_name(infobox_element)
+
+# Print element_name
+element_name</code></pre>
+<pre><code>## [1] &quot;table&quot;</code></pre>
+</div>
+<div id="scraping-text" class="section level3">
+<h3>Scraping text</h3>
+<p>Of course you can get the contents of a node extracted using a CSS selector too, with html_text().</p>
+<p>Can you put the pieces together to get the page title like you did in Chapter 4?</p>
+<p>Instructions The infobox HTML element is stored in infobox_element in your workspace.</p>
+<p>Use html_node() to extract the element from infobox_element with the CSS class fn. Use html_text() to extract the contents of page_name. Print page_title.</p>
+<pre class="r"><code># Extract element with class fn
+page_name &lt;- html_node(x = infobox_element, css=&quot;.fn&quot;)
+
+# Get contents of page_name
+page_title &lt;-html_text(page_name)
+
+# Print page_title
+page_title</code></pre>
+<pre><code>## [1] &quot;Hadley Wickham&quot;</code></pre>
+</div>
+<div id="test-css-web-scraping" class="section level3">
+<h3>Test: CSS web scraping</h3>
+<p>Take a look at the chunk of HTML being read into test:</p>
+test &lt;- read_html(’
+<h1 class="main">
+Hello world!
+</h1>
+<p>’) How would you extract the text Hello world! using rvest and CSS selectors?</p>
+<p>Possible Answers html_text(html_node(test, css = “.main”))</p>
+<p>API calls</p>
+<p>Your first step is to use the Wikipedia API to get the page contents for a specific page. We’ll continue to work with the Hadley Wickham page, but as your last exercise, you’ll make it more general.</p>
+<p>To get the content of a page from the Wikipedia API you need to use a parameter based URL. The URL you want is</p>
+<p><a href="https://en.wikipedia.org/w/api.php?action=parse&amp;page=Hadley%20Wickham&amp;format=xml">https://en.wikipedia.org/w/api.php?action=parse&amp;page=Hadley%20Wickham&amp;format=xml</a> which specifies that you want the parsed content (i.e the HTML) for the “Hadley Wickham” page, and the API response should be XML.</p>
+<p>In this exercise you’ll make the request with GET() and parse the XML response with content().</p>
+<p>Instructions We’ve already defined base_url for you.</p>
+<p>Create a list for the query parameters, setting action = “parse”, page = “Hadley Wickham” and format = “xml”. Use GET() to call the API by specifying url and query. Parse the response using content().</p>
+<pre class="r"><code># Load httr
+library(httr)
+
+# The API url
+base_url &lt;- &quot;https://en.wikipedia.org/w/api.php&quot;
+
+# Set query parameters
+query_params &lt;- list(action=&quot;parse&quot;, 
+  page=&quot;Hadley Wickham&quot;, 
+  format=&quot;xml&quot;)
+
+# Get data from API
+resp &lt;- GET(url = base_url, query = query_params)
+    
+# Parse response
+resp_xml &lt;- content(resp)</code></pre>
+</div>
+<div id="extracting-information" class="section level3">
+<h3>Extracting information</h3>
+<p>Now we have a response from the API, we need to extract the HTML for the page from it. It turns out the HTML is stored in the contents of the XML response. Take a look, by using xml_text() to pull out the text from the XML response:</p>
+<p>xml_text(resp_xml) In this exercise, you’ll read this text as HTML, then extract the relevant nodes to get the infobox and page title.</p>
+<p>Instructions Code from the previous exercise has already been run, so you have resp_xml available in your workspace.</p>
+<p>Use read_html() to read the contents of the XML response (xml_text(resp_xml)) as HTML. Use html_node() to extract the infobox element (having the class infobox) from page_html with a CSS selector. Use html_node() to extract the page title element (having the class fn) from infobox_element with a CSS selector. Extract the title text from page_name with html_text().</p>
+<pre class="r"><code># Load rvest
+library(rvest)
+
+# Read page contents as HTML
+page_html &lt;- read_html(xml_text(resp_xml))
+page_html</code></pre>
+<pre><code>## {xml_document}
+## &lt;html&gt;
+## [1] &lt;body&gt;\n&lt;div class=&quot;mw-parser-output&quot;&gt;\n&lt;table class=&quot;infobox biogra ...</code></pre>
+<pre class="r"><code># Extract infobox element
+infobox_element &lt;- html_node(page_html, css = &quot;.infobox&quot;)
+infobox_element</code></pre>
+<pre><code>## {xml_node}
+## &lt;table class=&quot;infobox biography vcard&quot; style=&quot;width:22em&quot;&gt;
+##  [1] &lt;tr&gt;\n&lt;th colspan=&quot;2&quot; style=&quot;text-align:center;font-size:125%;font- ...
+##  [2] &lt;tr&gt;\n&lt;td colspan=&quot;2&quot; style=&quot;text-align:center&quot;&gt;&lt;a href=&quot;/wiki/File ...
+##  [3] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;Residence&lt;/th&gt;\n&lt;td class=&quot;label&quot;&gt;United Stat ...
+##  [4] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;Alma mater&lt;/th&gt;\n&lt;td&gt;\n&lt;a href=&quot;/wiki/Iowa_St ...
+##  [5] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;Known for&lt;/th&gt;\n&lt;td&gt;&lt;a href=&quot;/wiki/R_(program ...
+##  [6] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;Awards&lt;/th&gt;\n&lt;td&gt;\n&lt;div class=&quot;plainlist&quot;&gt;\n&lt; ...
+##  [7] &lt;tr&gt;\n&lt;td colspan=&quot;2&quot; style=&quot;text-align:center&quot;&gt;&lt;b&gt;Scientific caree ...
+##  [8] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;Fields&lt;/th&gt;\n&lt;td class=&quot;category&quot;&gt;\n&lt;div clas ...
+##  [9] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;&lt;a href=&quot;/wiki/Thesis&quot; title=&quot;Thesis&quot;&gt;Thesis&lt; ...
+## [10] &lt;tr&gt;\n&lt;th scope=&quot;row&quot;&gt;&lt;a href=&quot;/wiki/Doctoral_advisor&quot; title=&quot;Docto ...
+## [11] &lt;tr style=&quot;display:none&quot;&gt;\n&lt;td colspan=&quot;2&quot;&gt;&lt;/td&gt;\n&lt;/tr&gt;</code></pre>
+<pre class="r"><code># Extract page name element from infobox
+page_name &lt;- html_node(page_html, css=&quot;.fn&quot;)
+page_name</code></pre>
+<pre><code>## {xml_node}
+## &lt;span class=&quot;fn&quot;&gt;</code></pre>
+<pre class="r"><code># Extract page name as text
+page_title &lt;- html_text(page_name)
+page_title</code></pre>
+<pre><code>## [1] &quot;Hadley Wickham&quot;</code></pre>
+</div>
+<div id="normalising-information" class="section level3">
+<h3>Normalising information</h3>
+<p>Now it’s time to put together the information in a nice format. You’ve already seen you can use html_table() to parse the infobox into a data frame. But one piece of important information is missing from that table: who the information is about!</p>
+<p>In this exercise, you’ll parse the infobox in a data frame, and add a row for the full name of the subject.</p>
+<p>Instructions No need to repeat all the table parsing code from Chapter 4, we’ve already added it to your script.</p>
+<p>Create a new data frame where key is the string “Full name” and value is our previously stored page_title. Combine name_df with cleaned_table using rbind() and assign it to wiki_table2. Print wiki_table2.</p>
+<pre class="r"><code># Your code from earlier exercises
+wiki_table &lt;- html_table(infobox_element)
+colnames(wiki_table) &lt;- c(&quot;key&quot;, &quot;value&quot;)
+cleaned_table &lt;- subset(wiki_table, !key == &quot;&quot;)
+cleaned_table</code></pre>
+<pre><code>##                 key
+## 2         Residence
+## 3        Alma mater
+## 4         Known for
+## 5            Awards
+## 6 Scientific career
+## 7            Fields
+## 8            Thesis
+## 9 Doctoral advisors
+##                                                                               value
+## 2                                                                     United States
+## 3                                     Iowa State University, University of Auckland
+## 4                                                   R programming language packages
+## 5 John Chambers Award (2006)\nFellow of the American Statistical Association (2015)
+## 6                                                                 Scientific career
+## 7                                Statistics\nData science\nR (programming language)
+## 8                              Practical tools for exploring data and models (2008)
+## 9                                                            Di Cook\nHeike Hofmann</code></pre>
+<pre class="r"><code># Create a dataframe for full name
+name_df &lt;- data.frame(key = &quot;Full name&quot;, value = page_title)
+name_df</code></pre>
+<pre><code>##         key          value
+## 1 Full name Hadley Wickham</code></pre>
+<pre class="r"><code># Combine name_df with cleaned_table
+wiki_table2 &lt;- rbind(name_df, cleaned_table)
+
+# Print wiki_table
+wiki_table2</code></pre>
+<pre><code>##                 key
+## 1         Full name
+## 2         Residence
+## 3        Alma mater
+## 4         Known for
+## 5            Awards
+## 6 Scientific career
+## 7            Fields
+## 8            Thesis
+## 9 Doctoral advisors
+##                                                                               value
+## 1                                                                    Hadley Wickham
+## 2                                                                     United States
+## 3                                     Iowa State University, University of Auckland
+## 4                                                   R programming language packages
+## 5 John Chambers Award (2006)\nFellow of the American Statistical Association (2015)
+## 6                                                                 Scientific career
+## 7                                Statistics\nData science\nR (programming language)
+## 8                              Practical tools for exploring data and models (2008)
+## 9                                                            Di Cook\nHeike Hofmann</code></pre>
+</div>
+<div id="reproducibility" class="section level3">
+<h3>Reproducibility</h3>
+<p>Now you’ve figured out the process for requesting and parsing the infobox for the Hadley Wickham page, it’s time to turn it into a function that does the same thing for anyone.</p>
+<p>You’ve already done all the hard work! In the sample script we’ve just copied all your code from the previous three exercises, with only one change: we’ve wrapped it in the function definition syntax, and chosen the name get_infobox() for this function.</p>
+<p>It doesn’t quite work yet, the argument title isn’t used inside the function. In this exercise you’ll fix that, then test it out with some other personalities.</p>
+<p>Instructions Fix the function, by replacing the string “Hadley Wickham” with title, so that the title argument of the function will be used for the query. Test get_infobox() with title = “Hadley Wickham”. Now, try getting the infobox for “Ross Ihaka”. Finally, try getting the infobox for “Grace Hopper”</p>
+<pre class="r"><code>library(httr)
+library(rvest)
+library(xml2)
+
+get_infobox &lt;- function(title){
+  base_url &lt;- &quot;https://en.wikipedia.org/w/api.php&quot;
+  
+  # Change &quot;Hadley Wickham&quot; to title
+  query_params &lt;- list(action = &quot;parse&quot;, 
+    page = title, 
+    format = &quot;xml&quot;)
+  
+  resp &lt;- GET(url = base_url, query = query_params)
+  resp_xml &lt;- content(resp)
+  
+  page_html &lt;- read_html(xml_text(resp_xml))
+  infobox_element &lt;- html_node(x = page_html, css =&quot;.infobox&quot;)
+  page_name &lt;- html_node(x = infobox_element, css = &quot;.fn&quot;)
+  page_title &lt;- html_text(page_name)
+  
+  wiki_table &lt;- html_table(infobox_element)
+  colnames(wiki_table) &lt;- c(&quot;key&quot;, &quot;value&quot;)
+  cleaned_table &lt;- subset(wiki_table, !wiki_table$key == &quot;&quot;)
+  name_df &lt;- data.frame(key = &quot;Full name&quot;, value = page_title)
+  wiki_table &lt;- rbind(name_df, cleaned_table)
+  
+  wiki_table
+}
+
+# Test get_infobox with &quot;Hadley Wickham&quot;
+get_infobox(title = &quot;Hadley Wickham&quot;)</code></pre>
+<pre><code>##                 key
+## 1         Full name
+## 2         Residence
+## 3        Alma mater
+## 4         Known for
+## 5            Awards
+## 6 Scientific career
+## 7            Fields
+## 8            Thesis
+## 9 Doctoral advisors
+##                                                                               value
+## 1                                                                    Hadley Wickham
+## 2                                                                     United States
+## 3                                     Iowa State University, University of Auckland
+## 4                                                   R programming language packages
+## 5 John Chambers Award (2006)\nFellow of the American Statistical Association (2015)
+## 6                                                                 Scientific career
+## 7                                Statistics\nData science\nR (programming language)
+## 8                              Practical tools for exploring data and models (2008)
+## 9                                                            Di Cook\nHeike Hofmann</code></pre>
+<pre class="r"><code># Try get_infobox with &quot;Ross Ihaka&quot;
+get_infobox(title = &quot;Ross Ihaka&quot;)</code></pre>
+<pre><code>##                                                 key
+## 1                                         Full name
+## 2  Ihaka at the 2010 New Zealand Open Source Awards
+## 3                                         Residence
+## 4                                        Alma mater
+## 5                                         Known for
+## 6                                            Awards
+## 7                                 Scientific career
+## 8                                            Fields
+## 9                                      Institutions
+## 10                                           Thesis
+## 11                                 Doctoral advisor
+##                                                       value
+## 1                                                Ross Ihaka
+## 2          Ihaka at the 2010 New Zealand Open Source Awards
+## 3                                     Auckland, New Zealand
+## 4  University of AucklandUniversity of California, Berkeley
+## 5                                    R programming language
+## 6                                    Pickering Medal (2008)
+## 7                                         Scientific career
+## 8                                     Statistical Computing
+## 9                                    University of Auckland
+## 10                                          Ruaumoko (1985)
+## 11                                      David R. Brillinger</code></pre>
+<pre class="r"><code># Try get_infobox with &quot;Grace Hopper&quot;
+get_infobox(title = &quot;Grace Hopper&quot;)</code></pre>
+<pre><code>##                                   key
+## 1                           Full name
+## 2  Rear Admiral Grace M. Hopper, 1984
+## 3                         Nickname(s)
+## 4                                Born
+## 5                                Died
+## 6                     Place of burial
+## 7                          Allegiance
+## 8                      Service/branch
+## 9                    Years of service
+## 10                               Rank
+## 11                             Awards
+##                                                                                                                                                                                                                                                                                   value
+## 1                                                                                                                                                                                                                                                                   Grace Murray Hopper
+## 2                                                                                                                                                                                                                                                    Rear Admiral Grace M. Hopper, 1984
+## 3                                                                                                                                                                                                                                                                       &quot;Amazing Grace&quot;
+## 4                                                                                                                                                                                                                           (1906-12-09)December 9, 1906\nNew York City, New York, U.S.
+## 5                                                                                                                                                                                                                        January 1, 1992(1992-01-01) (aged 85)Arlington, Virginia, U.S.
+## 6                                                                                                                                                                                                                                                           Arlington National Cemetery
+## 7                                                                                                                                                                                                                                                              United States of America
+## 8                                                                                                                                                                                                                                                                    United States Navy
+## 9                                                                                                                                                                                                                                                       19431966, 19671971, 19721986
+## 10                                                                                                                                                                                                                                                            Rear admiral (lower half)
+## 11 Defense Distinguished Service Medal Legion of Merit Meritorious Service Medal American Campaign Medal World War II Victory Medal National Defense Service Medal Armed Forces Reserve Medal with two Hourglass Devices Naval Reserve Medal Presidential Medal of Freedom (posthumous)</code></pre>
+</div>
 </div>
 </div>
 
